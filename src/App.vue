@@ -1,28 +1,54 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <div class="main-content">
+      <Sidebar @update-filters="updateFilters" />
+      <div class="chart-container">
+        <ScatterPlot :filters="filters" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import Sidebar from './components/SideBar.vue';
+import ScatterPlot from './components/ScatterPlot.vue';
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    Sidebar,
+    ScatterPlot
+  },
+  data() {
+    return {
+      filters: {
+        pRange: [80, 210],
+        tRange: [500, 900],
+        h2oRange: [0, 20]
+      }
+    };
+  },
+  methods: {
+    updateFilters(newFilters) {
+      this.filters = newFilters;
+    }
   }
-}
+};
 </script>
 
 <style>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+  display: flex;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.chart-container {
+  flex-grow: 1;
+  margin-left: 320px; /* Make space for the sidebar */
 }
 </style>
