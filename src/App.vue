@@ -1,7 +1,8 @@
 <template>
   <div id="app">
     <div class="main-content">
-      <Sidebar @update-filters="updateFilters" />
+      <!-- <Sidebar @update-filters="updateFilters" /> -->
+      <side-bar-2 @update-filters="updateFilters"/>
       <div class="chart-container">
         <ScatterPlot :filters="filters" />
       </div>
@@ -10,13 +11,14 @@
 </template>
 
 <script>
-import Sidebar from './components/SideBar.vue';
+// import Sidebar from './components/SideBar.vue';
+import SideBar2 from './components/SideBar2.vue';
 import ScatterPlot from './components/ScatterPlot.vue';
 
 export default {
   name: 'App',
   components: {
-    Sidebar,
+    SideBar2,
     ScatterPlot
   },
   data() {
