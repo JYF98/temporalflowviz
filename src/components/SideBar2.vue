@@ -83,8 +83,8 @@
         <span slot="title">导航四</span>
       </el-menu-item> -->
       <template>
-        <el-table ref="multipleTable" :data="cases" tooltip-effect="dark" style="width: 100%" height="300" :hidden="isCollapse"
-          @selection-change="handleSelectionChange">
+        <el-table ref="multipleTable" :data="cases" tooltip-effect="dark" style="width: 100%" height="300"
+          :hidden="isCollapse" @selection-change="handleSelectionChange">
           <el-table-column type="selection" width="55">
           </el-table-column>
           <el-table-column fixed prop="case" label="Case" width="120" show-overflow-tooltip>
@@ -96,6 +96,11 @@
           <el-table-column prop="h2o" label="H2O含量">
           </el-table-column>
         </el-table>
+        <div style="margin-top: 20px">
+          <el-button @click="toggleSelection([cases[1], cases[2]])">切换第二、第三行的选中状态</el-button>
+          <el-button @click="toggleSelection()">取消选择</el-button>
+          <el-button type="primary" @click="showGraph()">展示</el-button>
+        </div>
       </template>
     </el-menu>
   </div>
@@ -161,6 +166,7 @@ export default {
       h2oRange: [0, 20], // Using a range for H2O content
       isCollapse: false,
       cases: [],
+      multipleSelection: [],
     };
   },
   methods: {
@@ -191,6 +197,22 @@ export default {
       } catch (error) {
         console.error('Error fetching cases:', error);
       }
+    },
+    toggleSelection(rows) {
+      if (rows) {
+        rows.forEach(row => {
+          this.$refs.multipleTable.toggleRowSelection(row);
+        });
+      } else {
+        this.$refs.multipleTable.clearSelection();
+      }
+    },
+    handleSelectionChange(val) {
+      this.multipleSelection = val;
+    },
+    showGraph() {
+      // Send the selected cases to the parent component
+      this.$emit('show-graph', this.multipleSelection);
     }
   },
   watch: {

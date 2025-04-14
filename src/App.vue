@@ -2,9 +2,9 @@
   <div id="app">
     <div class="main-content">
       <!-- <Sidebar @update-filters="updateFilters" /> -->
-      <side-bar-2 @update-filters="updateFilters"/>
+      <side-bar-2 @show-graph="handleShowGraph"/>
       <div class="chart-container">
-        <ScatterPlot :filters="filters" />
+        <ScatterPlot :selectedCases="selectedCasesToDisplay" />
       </div>
     </div>
   </div>
@@ -27,12 +27,16 @@ export default {
         pRange: [80, 210],
         tRange: [500, 900],
         h2oRange: [0, 20]
-      }
+      },
+      selectedCasesToDisplay: []
     };
   },
   methods: {
     updateFilters(newFilters) {
       this.filters = newFilters;
+    },
+    handleShowGraph(selectedCases) {
+      this.selectedCasesToDisplay = selectedCases;
     }
   }
 };
