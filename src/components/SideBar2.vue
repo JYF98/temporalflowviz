@@ -99,9 +99,20 @@
         <div style="margin-top: 20px">
           <el-button @click="toggleSelection([cases[1], cases[2]])">切换第二、第三行的选中状态</el-button>
           <el-button @click="toggleSelection()">取消选择</el-button>
-          <el-button type="primary" @click="showGraph()">展示</el-button>
         </div>
       </template>
+      <el-menu-item-group>
+        <span slot="title">选择分量:</span>
+        <el-menu-item index="1-4">
+          <el-radio-group v-model="selectedComponent">
+            <el-radio-button label="p">静压 (p)</el-radio-button>
+            <el-radio-button label="Mach">马赫数 (Mach)</el-radio-button>
+            <el-radio-button label="T">温度 (T)</el-radio-button>
+          </el-radio-group>
+        </el-menu-item>
+      </el-menu-item-group>
+      <el-button type="primary" @click="showGraph()">展示</el-button>
+
     </el-menu>
   </div>
 </template>
@@ -150,8 +161,6 @@
 <script>
 import VueSlider from 'vue-slider-component';
 import 'vue-slider-component/theme/antd.css';
-
-// Send a request to python backend to get the data
 import axios from 'axios';
 
 export default {
@@ -167,7 +176,11 @@ export default {
       isCollapse: false,
       cases: [],
       multipleSelection: [],
+      selectedComponent: 'p', // Default selected component
     };
+  },
+  created() {
+    this.fetchCases(); // Fetch cases when the component is created
   },
   methods: {
     handleOpen(key, keyPath) {
@@ -212,7 +225,7 @@ export default {
     },
     showGraph() {
       // Send the selected cases to the parent component
-      this.$emit('show-graph', this.multipleSelection);
+      this.$emit('show-graph', this.multipleSelection, this.selectedComponent);
     }
   },
   watch: {
