@@ -25,37 +25,51 @@ export default {
       this.updateChart();
     }
   },
+  data: function () {
+    return {
+      myChart: null
+    };
+  },
   methods: {
-    updateChart() {
-      const chartDom = this.$refs.scatterChart;
-      const myChart = echarts.init(chartDom);
-      const coordinates = this.fetchCoordinates();
+    async updateChart() {
+      try {
+        // Wait for coordinates to be fetched
+        const coordinates = await this.fetchCoordinates();
+        console.log('Coordinates:', coordinates);
 
-      const option = {
-        title: {
-          text: 'Scatter Plot Example'
-        },
-        tooltip: {
-          trigger: 'item'
-        },
-        xAxis: {
-          type: 'value',
-          name: 'X Axis'
-        },
-        yAxis: {
-          type: 'value',
-          name: 'Y Axis'
-        },
-        series: [
-          {
-            symbolSize: 10,
-            data: coordinates,
-            type: 'scatter'
-          }
-        ]
-      };
+        // Only proceed if we have valid coordinates
+        if (Array.isArray(coordinates)) {
+          const option = {
+            title: {
+              text: 'Scatter Plot Example'
+            },
+            tooltip: {
+              trigger: 'item'
+            },
+            xAxis: {
+              type: 'value',
+              name: 'X Axis'
+            },
+            yAxis: {
+              type: 'value',
+              name: 'Y Axis'
+            },
+            series: [
+              {
+                symbolSize: 5,
+                data: coordinates,
+                type: 'scatter'
+              }
+            ]
+          };
 
-      myChart.setOption(option);
+          this.myChart.setOption(option);
+        } else {
+          console.error('Invalid coordinates format:', coordinates);
+        }
+      } catch (error) {
+        console.error('Error updating chart:', error);
+      }
     },
     async fetchCoordinates() {
       try {
@@ -68,7 +82,12 @@ export default {
         console.error('Error fetching coordinates:', error);
         return [];
       }
-    },
+    }
+  },
+  mounted() {
+    // Initialize the chart when the component is mounted
+    const chartDom = this.$refs.scatterChart;
+    this.myChart = echarts.init(chartDom);
   }
 };
 </script>

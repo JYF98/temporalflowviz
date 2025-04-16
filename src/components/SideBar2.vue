@@ -106,8 +106,9 @@
         <el-menu-item index="1-4">
           <el-radio-group v-model="selectedComponent">
             <el-radio-button label="p">静压 (p)</el-radio-button>
+            <el-radio-button label="OH">OH</el-radio-button>
             <el-radio-button label="Mach">马赫数 (Mach)</el-radio-button>
-            <el-radio-button label="T">温度 (T)</el-radio-button>
+            
           </el-radio-group>
         </el-menu-item>
       </el-menu-item-group>
@@ -226,6 +227,8 @@ export default {
     showGraph() {
       // Send the selected cases to the parent component
       this.$emit('show-graph', this.multipleSelection, this.selectedComponent);
+      console.log('SideBar2 Selected cases:', this.multipleSelection);
+      console.log('SideBar2 Selected component:', this.selectedComponent);
     }
   },
   watch: {
