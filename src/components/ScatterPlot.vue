@@ -4,25 +4,25 @@
 
 <script>
 import * as echarts from 'echarts';
+// import ecStat from 'echarts-stat';
 import axios from 'axios';
+
+// echarts.registerTransform(ecStat.transform.clustering);
 
 export default {
   name: 'ScatterPlot',
   props: {
-    selectedCases: {
-      type: Array,
+    graphObj: {
+      type: Object,
+      required: true
     },
-    selectedComponent: {
-      type: String,
-      default: 'p'
-    }
   },
   watch: {
-    selectedCases() {
-      this.updateChart();
-    },
-    selectedComponent() {
-      this.updateChart();
+    graphObj: {
+      handler() {
+        this.updateChart();
+      },
+      deep: true
     }
   },
   data: function () {
@@ -33,37 +33,39 @@ export default {
   methods: {
     async updateChart() {
       try {
-        // Wait for coordinates to be fetched
-        const coordinates = await this.fetchCoordinates();
-        console.log('Coordinates:', coordinates);
+        const data = await this.fetchCoordinates();
+        const coordinates = data.tsne_xys
+        const labels = data.labels
+        const cluster_count = data.cluster_count
 
-        // Only proceed if we have valid coordinates
-        if (Array.isArray(coordinates)) {
+        if (Array.isArray(coordinates) && coordinates.length > 0) {
           const option = {
             title: {
-              text: 'Scatter Plot Example'
+              text: 'Scatter Plot'
             },
-            tooltip: {
-              trigger: 'item'
-            },
+            tooltip: {},
             xAxis: {
               type: 'value',
-              name: 'X Axis'
+              name: 'X-axis'
             },
             yAxis: {
               type: 'value',
-              name: 'Y Axis'
+              name: 'Y-axis'
             },
-            series: [
-              {
-                symbolSize: 5,
-                data: coordinates,
-                type: 'scatter'
+            series: [{
+              type: 'scatter',
+              data: coordinates,
+              symbolSize: 5,
+              itemStyle: {
+                color: function (params) {
+                  const clusterIndex = labels[params.dataIndex];
+                  return clusterIndex < cluster_count ? `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)` : '#000';
+                }
               }
-            ]
+            }]
           };
 
-          this.myChart.setOption(option);
+          option && this.myChart.setOption(option);
         } else {
           console.error('Invalid coordinates format:', coordinates);
         }
@@ -73,10 +75,7 @@ export default {
     },
     async fetchCoordinates() {
       try {
-        const response = await axios.post('http://localhost:5000/coordinates', {
-          selectedCases: this.selectedCases,
-          selectedComponent: this.selectedComponent
-        });
+        const response = await axios.post('http://localhost:5000/coordinates', this.graphObj);
         return response.data;
       } catch (error) {
         console.error('Error fetching coordinates:', error);

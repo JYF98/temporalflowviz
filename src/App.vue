@@ -4,7 +4,7 @@
       <!-- <Sidebar @update-filters="updateFilters" /> -->
       <side-bar-2 @show-graph="handleShowGraph"/>
       <div class="chart-container">
-        <ScatterPlot :selectedCases="selectedCasesToDisplay" :selected-component="selectedComponent" />
+        <ScatterPlot :graphObj="graphObj" />
       </div>
     </div>
   </div>
@@ -28,17 +28,22 @@ export default {
         tRange: [500, 900],
         h2oRange: [0, 20]
       },
-      selectedCasesToDisplay: [],
-      selectedComponent: 'p', // Default selected component
+      // selectedCasesToDisplay: [],
+      // selectedComponent: 'p', // Default selected component
+      graphObj: {
+        selectedCases: [],
+        selectedComponent: 'p', // Default selected component
+        minSamples: 5, // DBSCAN minSamples
+        eps: 0.5, // DBSCAN eps
+      },
     };
   },
   methods: {
     updateFilters(newFilters) {
       this.filters = newFilters;
     },
-    handleShowGraph(selectedCases, selectedComponent) {
-      this.selectedCasesToDisplay = selectedCases;
-      this.selectedComponent = selectedComponent;
+    handleShowGraph(graphObj) {
+      this.graphObj = graphObj;
     }
   }
 };

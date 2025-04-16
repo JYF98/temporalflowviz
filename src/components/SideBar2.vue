@@ -59,29 +59,10 @@
             </el-row>
           </el-menu-item>
         </el-menu-item-group>
-        <div style="text-align: center; margin: 20px 0;">
+        <!-- <div style="text-align: center; margin: 20px 0;">
           <el-button type="primary">搜索</el-button>
-        </div>
-        <!-- <el-menu-item-group title="分组2">
-          <el-menu-item index="1-4">选项4</el-menu-item>
-        </el-menu-item-group>
-        <el-submenu index="1-5">
-          <span slot="title">选项5</span>
-          <el-menu-item index="1-5-1">选项1</el-menu-item>
-        </el-submenu> -->
+        </div> -->
       </el-submenu>
-      <!-- <el-menu-item index="2">
-        <i class="el-icon-menu"></i>
-        <span slot="title">导航二</span>
-      </el-menu-item>
-      <el-menu-item index="3" disabled>
-        <i class="el-icon-document"></i>
-        <span slot="title">导航三</span>
-      </el-menu-item>
-      <el-menu-item index="4">
-        <i class="el-icon-setting"></i>
-        <span slot="title">导航四</span>
-      </el-menu-item> -->
       <template>
         <el-table ref="multipleTable" :data="cases" tooltip-effect="dark" style="width: 100%" height="300"
           :hidden="isCollapse" @selection-change="handleSelectionChange">
@@ -104,7 +85,7 @@
       <el-menu-item-group>
         <span slot="title">选择分量:</span>
         <el-menu-item index="1-4">
-          <el-radio-group v-model="selectedComponent">
+          <el-radio-group v-model="graphObj.selectedComponent">
             <el-radio-button label="p">静压 (p)</el-radio-button>
             <el-radio-button label="OH">OH</el-radio-button>
             <el-radio-button label="Mach">马赫数 (Mach)</el-radio-button>
@@ -112,6 +93,10 @@
           </el-radio-group>
         </el-menu-item>
       </el-menu-item-group>
+      <el-slider
+        v-model="graphObj.minSamples"
+        show-input>
+      </el-slider>
       <el-button type="primary" @click="showGraph()">展示</el-button>
 
     </el-menu>
@@ -176,8 +161,12 @@ export default {
       h2oRange: [0, 20], // Using a range for H2O content
       isCollapse: false,
       cases: [],
-      multipleSelection: [],
-      selectedComponent: 'p', // Default selected component
+      graphObj: {
+        selectedCases: [],
+        selectedComponent: 'p', // Default selected component
+        minSamples: 5, // DBSCAN minSamples
+        eps: 0.5, // DBSCAN eps
+      },
     };
   },
   created() {
@@ -222,13 +211,11 @@ export default {
       }
     },
     handleSelectionChange(val) {
-      this.multipleSelection = val;
+      this.graphObj.selectedCases = val;
     },
     showGraph() {
       // Send the selected cases to the parent component
-      this.$emit('show-graph', this.multipleSelection, this.selectedComponent);
-      console.log('SideBar2 Selected cases:', this.multipleSelection);
-      console.log('SideBar2 Selected component:', this.selectedComponent);
+      this.$emit('show-graph', this.graphObj);
     }
   },
   watch: {
