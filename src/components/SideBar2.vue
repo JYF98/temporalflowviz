@@ -230,8 +230,11 @@ export default {
       this.graphObj.selectedCases = val;
     },
     showGraph() {
-      // Send the selected cases to the parent component
-      this.$emit('show-graph', this.graphObj);
+      // Create a deep copy of the object using JSON methods
+      const graphObjCopy = JSON.parse(JSON.stringify(this.graphObj));
+      
+      // Send the copy to the parent component
+      this.$emit('show-graph', graphObjCopy);
     }
   },
   watch: {

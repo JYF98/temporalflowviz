@@ -2,14 +2,7 @@
   <div>
     <div ref="scatterChart" style="height: 500px;"></div>
     <div v-if="selectedPoint !== null" class="selected-point-details">
-      <h3>Selected Data Point</h3>
       <img v-if="selectedImage" :src="selectedImage" alt="Cluster image" class="cluster-image" />
-      <div class="point-info">
-        <p>Point index: {{ selectedPoint }}</p>
-        <p>Cluster: {{ selectedCluster }}</p>
-        <p>X: {{ selectedCoordinates[0] }}</p>
-        <p>Y: {{ selectedCoordinates[1] }}</p>
-      </div>
     </div>
   </div>
 </template>
@@ -61,7 +54,7 @@ export default {
               trigger: 'item',
               formatter: function (params) {
                 const index = params.dataIndex;
-                return `X: ${coordinates[index][0]}<br/>Y: ${coordinates[index][1]}<br/>Cluster: ${labels[index]}`;
+                return `Cluster: ${labels[index]}<br/>File: ${fileNames[index]}`;
               }
             },
             xAxis: {
@@ -101,7 +94,7 @@ export default {
               this.selectedCoordinates = point;
               
               // FIXED: Correct path to images in public folder
-              this.selectedImage = process.env.BASE_URL + 'external-images/p/' + fileName;
+              this.selectedImage = process.env.BASE_URL + 'external-images/' + fileName;
               
               // Add error handling for image loading
               const img = new Image();
@@ -158,8 +151,8 @@ export default {
 }
 
 .cluster-image {
-  max-width: 200px;
-  max-height: 200px;
+  /* max-width: 200px; */
+  max-height: 150px;
   margin-right: 20px;
 }
 

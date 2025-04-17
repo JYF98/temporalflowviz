@@ -31,10 +31,10 @@ export default {
       // selectedCasesToDisplay: [],
       // selectedComponent: 'p', // Default selected component
       graphObj: {
-        selectedCases: [],
-        selectedComponent: 'p', // Default selected component
-        minSamples: 5, // DBSCAN minSamples
-        eps: 0.5, // DBSCAN eps
+        // selectedCases: [],
+        // selectedComponent: 'p', // Default selected component
+        // minSamples: 5, // DBSCAN minSamples
+        // eps: 0.5, // DBSCAN eps
       },
     };
   },
