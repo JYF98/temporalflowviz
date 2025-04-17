@@ -62,6 +62,6 @@ export default {
 
 .chart-container {
   flex-grow: 1;
-  margin-left: 320px; /* Make space for the sidebar */
+  /* margin-left: 100px; Make space for the sidebar */
 }
 </style>

@@ -59,46 +59,62 @@
             </el-row>
           </el-menu-item>
         </el-menu-item-group>
-        <!-- <div style="text-align: center; margin: 20px 0;">
-          <el-button type="primary">搜索</el-button>
-        </div> -->
       </el-submenu>
-      <template>
-        <el-table ref="multipleTable" :data="cases" tooltip-effect="dark" style="width: 100%" height="300"
-          :hidden="isCollapse" @selection-change="handleSelectionChange">
-          <el-table-column type="selection" width="55">
-          </el-table-column>
-          <el-table-column fixed prop="case" label="Case" width="120" show-overflow-tooltip>
-          </el-table-column>
-          <el-table-column prop="p" label="静压">
-          </el-table-column>
-          <el-table-column prop="t" label="温度">
-          </el-table-column>
-          <el-table-column prop="h2o" label="H2O含量">
-          </el-table-column>
-        </el-table>
-        <div style="margin-top: 20px">
-          <el-button @click="toggleSelection([cases[1], cases[2]])">切换第二、第三行的选中状态</el-button>
-          <el-button @click="toggleSelection()">取消选择</el-button>
-        </div>
-      </template>
       <el-menu-item-group>
-        <span slot="title">选择分量:</span>
-        <el-menu-item index="1-4">
-          <el-radio-group v-model="graphObj.selectedComponent">
-            <el-radio-button label="p">静压 (p)</el-radio-button>
-            <el-radio-button label="OH">OH</el-radio-button>
-            <el-radio-button label="Mach">马赫数 (Mach)</el-radio-button>
-            
-          </el-radio-group>
-        </el-menu-item>
+        <span slot="title">选择Cases:</span>
+        <template>
+          <el-table ref="multipleTable" :data="cases" tooltip-effect="dark" style="width: 100%" height="300"
+            :hidden="isCollapse" @selection-change="handleSelectionChange">
+            <el-table-column type="selection" width="55">
+            </el-table-column>
+            <el-table-column fixed prop="case" label="Case" width="120" show-overflow-tooltip>
+            </el-table-column>
+            <el-table-column prop="p" label="静压">
+            </el-table-column>
+            <el-table-column prop="t" label="温度">
+            </el-table-column>
+            <el-table-column prop="h2o" label="H2O含量">
+            </el-table-column>
+          </el-table>
+          <!-- <div style="margin-top: 20px">
+            <el-button @click="toggleSelection([cases[1], cases[2]])">切换第二、第三行的选中状态</el-button>
+            <el-button @click="toggleSelection()">取消选择</el-button>
+          </div> -->
+        </template>
       </el-menu-item-group>
-      <el-slider
-        v-model="graphObj.minSamples"
-        show-input>
-      </el-slider>
-      <el-button type="primary" @click="showGraph()">展示</el-button>
-
+      <el-submenu index="2">
+        <template slot="title">
+          <i class="el-icon-location"></i>
+          <span slot="title">聚类参数</span>
+        </template>
+        <el-menu-item-group>
+          <span slot="title">选择分量:</span>
+          <el-menu-item index="2-1">
+            <el-radio-group v-model="graphObj.selectedComponent">
+              <el-radio-button label="p">静压 (p)</el-radio-button>
+              <el-radio-button label="OH">OH</el-radio-button>
+              <el-radio-button label="Mach">马赫数 (Mach)</el-radio-button>
+            </el-radio-group>
+          </el-menu-item>
+        </el-menu-item-group>
+        <el-menu-item-group>
+          <span slot="title">DBSCAN参数:</span>
+          <el-menu-item index="2-2">
+            <div>
+              <label>最小样本数 (minSamples):</label>
+              <el-slider v-model="graphObj.minSamples" show-input>
+              </el-slider>
+            </div>
+            <div>
+              <label>邻域半径 (eps):</label>
+              <el-slider v-model="graphObj.eps" show-input></el-slider>
+            </div>
+          </el-menu-item>
+        </el-menu-item-group>
+      </el-submenu>
+      <el-menu-item index="3" style="text-align: center;">
+        <el-button type="primary" @click="showGraph">显示图</el-button>
+      </el-menu-item>
     </el-menu>
   </div>
 </template>
