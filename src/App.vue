@@ -43,7 +43,7 @@ export default {
       this.filters = newFilters;
     },
     handleShowGraph(graphObj) {
-      this.graphObj = graphObj;
+      this.graphObj = JSON.parse(JSON.stringify(graphObj));
     }
   }
 };

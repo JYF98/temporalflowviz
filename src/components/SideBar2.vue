@@ -180,8 +180,8 @@ export default {
       graphObj: {
         selectedCases: [],
         selectedComponent: 'p', // Default selected component
-        minSamples: 5, // DBSCAN minSamples
-        eps: 0.5, // DBSCAN eps
+        minSamples: 30, // DBSCAN minSamples
+        eps: 4, // DBSCAN eps
       },
     };
   },
