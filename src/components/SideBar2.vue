@@ -1,18 +1,18 @@
 <template>
   <div>
     <el-radio-group v-model="isCollapse" style="margin-bottom: 20px;">
-      <el-radio-button :label="false">展开</el-radio-button>
-      <el-radio-button :label="true">收起</el-radio-button>
+      <el-radio-button :label="false">Expand</el-radio-button>
+      <el-radio-button :label="true">Wrap</el-radio-button>
     </el-radio-group>
     <el-menu default-active="1-3" class="el-menu-vertical-demo" @open="handleOpen" @close="handleClose"
       :collapse="isCollapse">
       <el-submenu index="1">
         <template slot="title">
           <i class="el-icon-location"></i>
-          <span slot="title">初始参数范围</span>
+          <span slot="title">Initial parameters filters</span>
         </template>
         <el-menu-item-group>
-          <span slot="title">静压(Mpa):</span>
+          <span slot="title">P (Mpa):</span>
           <el-menu-item index="1-1">
             <el-row :gutter="10">
               <el-col :span="12">
@@ -28,7 +28,7 @@
           </el-menu-item>
         </el-menu-item-group>
         <el-menu-item-group>
-          <span slot="title">温度(K):</span>
+          <span slot="title">Temperature (K):</span>
           <el-menu-item index="1-2">
             <el-row :gutter="10">
               <el-col :span="12">
@@ -44,7 +44,7 @@
           </el-menu-item>
         </el-menu-item-group>
         <el-menu-item-group>
-          <span slot="title">H2O含量(%):</span>
+          <span slot="title">H2O (%):</span>
           <el-menu-item index="1-3">
             <el-row :gutter="10">
               <el-col :span="12">
@@ -61,7 +61,7 @@
         </el-menu-item-group>
       </el-submenu>
       <el-menu-item-group>
-        <span slot="title">选择Cases:</span>
+        <span slot="title">Selected Cases:</span>
         <template>
           <el-table ref="multipleTable" :data="cases" tooltip-effect="dark" style="width: 100%" height="300"
             :hidden="isCollapse" @selection-change="handleSelectionChange">
@@ -69,11 +69,11 @@
             </el-table-column>
             <el-table-column fixed prop="case" label="Case" width="120" show-overflow-tooltip>
             </el-table-column>
-            <el-table-column prop="p" label="静压">
+            <el-table-column prop="p" label="P">
             </el-table-column>
-            <el-table-column prop="t" label="温度">
+            <el-table-column prop="t" label="T">
             </el-table-column>
-            <el-table-column prop="h2o" label="H2O含量">
+            <el-table-column prop="h2o" label="H2O (%)">
             </el-table-column>
           </el-table>
           <!-- <div style="margin-top: 20px">
@@ -85,35 +85,35 @@
       <el-submenu index="2">
         <template slot="title">
           <i class="el-icon-location"></i>
-          <span slot="title">聚类参数</span>
+          <span slot="title">Clustering Parameters</span>
         </template>
         <el-menu-item-group>
-          <span slot="title">选择分量:</span>
+          <span slot="title">Selected Component:</span>
           <el-menu-item index="2-1">
             <el-radio-group v-model="graphObj.selectedComponent">
-              <el-radio-button label="p">静压 (p)</el-radio-button>
+              <el-radio-button label="p">p</el-radio-button>
               <el-radio-button label="OH">OH</el-radio-button>
-              <el-radio-button label="Mach">马赫数 (Mach)</el-radio-button>
+              <el-radio-button label="Mach">Mach</el-radio-button>
             </el-radio-group>
           </el-menu-item>
         </el-menu-item-group>
         <el-menu-item-group>
-          <span slot="title">DBSCAN参数:</span>
+          <span slot="title">DBSCAN Parameters:</span>
           <el-menu-item index="2-2">
             <div>
-              <label>最小样本数 (minSamples):</label>
+              <label>minSamples:</label>
               <el-slider v-model="graphObj.minSamples" show-input>
               </el-slider>
             </div>
             <div>
-              <label>邻域半径 (eps):</label>
+              <label>eps:</label>
               <el-slider v-model="graphObj.eps" show-input></el-slider>
             </div>
           </el-menu-item>
         </el-menu-item-group>
       </el-submenu>
       <el-menu-item index="3" style="text-align: center;">
-        <el-button type="primary" @click="showGraph">显示图</el-button>
+        <el-button type="primary" @click="showGraph">Draw Scatter Plot</el-button>
       </el-menu-item>
     </el-menu>
   </div>
@@ -121,12 +121,12 @@
 
 <style>
 .el-menu-vertical-demo:not(.el-menu--collapse) {
-  width: 400px;
+  width: 450px;
   min-height: 400px;
 }
 
 .el-row {
-  margin-bottom: 20px;
+  margin-bottom: 5px;
 
   &:last-child {
     margin-bottom: 0;
