@@ -5,22 +5,36 @@
       <div class="loading-text">Loading chart data...</div>
       <div class="loading-progress">{{ loadingProgress }}%</div>
     </div>
-    <div class="chart-container">
-      <div ref="scatterChart" style="height: 500px; width: 70%;"></div>
-      <!-- <div class="zoom-controls">
-        <button @click="zoomIn" class="zoom-button">+</button>
-        <button @click="zoomOut" class="zoom-button">-</button>
-        <button @click="resetZoom" class="zoom-button">Reset</button>
-      </div> -->
-    </div>
-    <div v-if="selectedPoint !== null" class="selected-point-details">
-      <img v-if="selectedImage" :src="selectedImage" alt="Cluster image" class="cluster-image" />
-      <div class="point-info">
-        <p>Case: {{ selectedCaseName }}</p>
-        <p>Time step: {{ selectedTimeStep }}</p>
-        <button @click="clearSelection" class="clear-button">Clear Selection</button>
+    <div class="main-container">
+      <!-- Left side: Chart -->
+      <div class="chart-container">
+        <div ref="scatterChart" style="width: 600px; height: 600px;"></div>
+      </div>
+
+      <!-- Right side: Images -->
+      <div class="images-container" v-if="selectedCaseName">
+        <div class="images-grid">
+          <div v-for="(image, index) in caseImages" :key="index" class="image-item"
+            :class="{ 'selected-image': image.isSelected }">
+            <div class="image-with-time">
+              <div class="time-label">{{ image.timeStep }}</div>
+              <img :src="image.src" :alt="`${image.timeStep}`" />
+            </div>
+          </div>
+        </div>
+        <!-- Keep your existing selected point details for the bottom section -->
+        <div v-if="selectedPoint !== null" class="selected-point-details">
+          <img v-if="selectedImage" :src="selectedImage" alt="Cluster image" class="selected-detail-image" />
+          <div class="point-info">
+            <p>Case: {{ selectedCaseName }}</p>
+            <p>Time step: {{ selectedTimeStep }}</p>
+            <button @click="clearSelection" class="clear-button">Clear Selection</button>
+          </div>
+        </div>
       </div>
     </div>
+
+    
   </div>
 </template>
 
@@ -38,7 +52,11 @@ export default {
   },
   watch: {
     graphObj: {
-      handler() {
+      handler(newVal, oldVal) {
+        console.log('graphObj changed:', 
+          oldVal?.selectedComponent, 
+          '->', 
+          newVal?.selectedComponent);
         this.updateChart();
       },
       deep: true
@@ -56,7 +74,9 @@ export default {
       loadingProgress: 0,
       originalOption: null,
       zoomLevel: 1,
-      zoomFactor: 1.2 // Adjust this value to change zoom intensity
+      zoomFactor: 1.2, // Adjust this value to change zoom intensity
+      caseImages: [], // Will hold all images for the selected case
+      resizeHandler: null, // Store the resize handler reference
     };
   },
   methods: {
@@ -64,14 +84,36 @@ export default {
       try {
         // Start loading state
         this.isLoading = true;
-        
+        console.log('Updating chart with component:', this.graphObj.selectedComponent);
+
         // Clear any previous selection
         this.clearSelection();
         
+        // Important: Check if chart was disposed and needs recreation
+        if (!this.myChart || this.myChart.isDisposed()) {
+          console.log('Chart was disposed, recreating...');
+          const chartDom = this.$refs.scatterChart;
+          if (chartDom) {
+            this.myChart = echarts.init(chartDom);
+            
+            // Re-attach event listeners
+            this.myChart.on('datazoom', () => {
+              if (this.selectedCaseSeries) {
+                // Re-apply the line series when zooming to keep it visible
+                this.myChart.setOption(this.selectedCaseSeries);
+              }
+            });
+          } else {
+            console.error('Chart DOM element not found');
+            this.isLoading = false;
+            return;
+          }
+        }
+
         // Fetch data
         this.loadingProgress = 30;
         const data = await this.fetchCoordinates();
-        
+
         this.loadingProgress = 60;
         const coordinates = data.tsne_xys;
         const labels = data.labels;
@@ -80,9 +122,9 @@ export default {
         const times = data.times;
         const cases = data.cases;
         const caseMap = this.buildCaseMap(cases);
-        
+
         this.loadingProgress = 80;
-        
+
         if (Array.isArray(coordinates) && coordinates.length > 0) {
           const option = {
             title: {
@@ -92,46 +134,105 @@ export default {
               trigger: 'item',
               formatter: function (params) {
                 const index = params.dataIndex;
-                const caseName = cases[index]; // Extract case name from filename
+                const caseName = cases[index];
                 const timeStep = times[index];
                 return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${labels[index]}`;
               }
             },
+            grid: {
+              left: '10%',
+              right: '15%',
+              bottom: '15%',
+              containLabel: true
+            },
             xAxis: {
               type: 'value',
-              scale: true
+              scale: true,
+              name: 'X-axis',
+              nameLocation: 'middle',
+              nameGap: 30,
+              splitLine: {
+                lineStyle: {
+                  type: 'dashed'
+                }
+              }
             },
             yAxis: {
               type: 'value',
-              scale: true
+              scale: true,
+              name: 'Y-axis',
+              nameLocation: 'middle',
+              nameGap: 30,
+              splitLine: {
+                lineStyle: {
+                  type: 'dashed'
+                }
+              }
             },
             toolbox: {
               feature: {
                 dataZoom: {
-                  yAxisIndex: 'none'
+                  yAxisIndex: 'none',
+                  title: {
+                    zoom: 'Zoom',
+                    back: 'Reset Zoom'
+                  }
                 },
-                restore: {},
-                saveAsImage: {}
-              }
+                restore: { title: 'Reset' },
+                saveAsImage: { title: 'Save as Image' }
+              },
+              right: 20,
+              top: 25
             },
             dataZoom: [
               {
+                id: 'dataZoomX',
+                type: 'slider',
+                xAxisIndex: 0,
+                filterMode: 'none', // Key setting - preserve all data points
+                start: 0,
+                end: 100,
+                bottom: 10,
+                height: 20
+              },
+              {
+                id: 'dataZoomY',
+                type: 'slider',
+                yAxisIndex: 0,
+                filterMode: 'none', // Key setting - preserve all data points
+                start: 0,
+                end: 100,
+                right: 10,
+                width: 20
+              },
+              {
                 type: 'inside',
                 xAxisIndex: 0,
-                filterMode: 'empty'
+                filterMode: 'none', // Key setting - preserve all data points
+                start: 0,
+                end: 100
               },
               {
                 type: 'inside',
                 yAxisIndex: 0,
-                filterMode: 'empty'
+                filterMode: 'none', // Key setting - preserve all data points
+                start: 0,
+                end: 100
               }
             ],
+            // legend: {
+            //   data: ['Scatter Data', 'Selected Case'],
+            //   right: 10,
+            //   top: 'center',
+            //   orient: 'vertical'
+            // },
             series: [{
+              name: 'Scatter Data',
               type: 'scatter',
               id: 'main-scatter',
               data: coordinates,
               symbolSize: 5,
-              itemStyle: { 
+              itemStyle: {
                 color: function (params) {
                   const clusterIndex = labels[params.dataIndex];
                   return clusterIndex < cluster_count ? `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)` : '#000';
@@ -142,76 +243,106 @@ export default {
 
           // Store the original option for resetting view
           this.originalOption = JSON.parse(JSON.stringify(option));
-          
+
           this.loadingProgress = 90;
           this.myChart.setOption(option);
-          
+
+          // Add the datazoom event handler to handle the line visibility during zoom
+          this.myChart.on('datazoom', () => {
+            if (this.selectedCaseSeries) {
+              // Re-apply the line series when zooming to keep it visible
+              this.myChart.setOption(this.selectedCaseSeries);
+            }
+          });
+
           // Using arrow function to preserve 'this' context
           this.myChart.on('click', (params) => {
             if (params.componentType === 'series') {
               const index = params.dataIndex;
               const fileName = fileNames[index];
               const caseName = cases[index]; // Extract case name from filename
-              
+
               // Find all points from the same case
               const casePoints = caseMap[caseName] || [];
-              
+
               if (casePoints.length > 0) {
                 // Sort points by time
                 casePoints.sort((a, b) => times[a] - times[b]);
-                
+
                 // Extract coordinates for the line
                 const lineCoordinates = casePoints.map(idx => coordinates[idx]);
-                
+
                 // Add a line series connecting the points in time order
                 const lineOption = {
                   series: [
-                    // Keep the original scatter series
+                    // Keep the original scatter series for background points
                     {
                       id: 'main-scatter',
-                      type: 'scatter'
+                      type: 'scatter',
+                      symbolSize: 5,
+                      z: 5 // Keep regular points in middle layer
                     },
-                    // Add line series to connect points from the same case
+                    // Add connecting line first (lowest z-index of active elements)
                     {
                       id: 'case-line',
                       type: 'line',
                       data: lineCoordinates,
                       lineStyle: {
-                        color: '#ff5500',
+                        color: '#000000',
                         width: 2
                       },
-                      symbol: 'circle',
-                      symbolSize: 8,
-                      emphasis: {
-                        lineStyle: {
-                          width: 3
-                        },
-                        symbolSize: 10
-                      },
-                      z: 10 // Ensure line is drawn above scatter points
-                    }
+                      symbol: 'none', // Remove symbols on the line itself
+                      z: 10 // Place line above background points
+                    },
+                    // Add highlighted points as a separate series (highest z-index)
+                    // {
+                    //   id: 'case-points',
+                    //   type: 'scatter',
+                    //   data: lineCoordinates,
+                    //   symbolSize: 8,
+                    //   itemStyle: {
+                    //     color: '#ff5500', // Orange color for highlighted points
+                    //     borderColor: '#ffffff',
+                    //     borderWidth: 1
+                    //   },
+                    //   z: 15 // Place case points above everything
+                    // }
                   ]
                 };
-                
+
                 this.myChart.setOption(lineOption);
                 this.selectedCaseSeries = lineOption;
-                
+
                 // Update selected point info
                 this.selectedPoint = index;
                 this.selectedCaseName = caseName;
                 this.selectedTimeStep = times[index];
-                
-                // Load the corresponding image
-                const pathmap = {p: 'p', OH: 'oh', Mach: 'mach'};
+
+                // Get the component path for images
+                const pathmap = { p: 'p', OH: 'oh', Mach: 'mach' };
                 const path = pathmap[this.graphObj.selectedComponent] || 'p';
+
+                // Generate the image path for the selected point
                 this.selectedImage = process.env.BASE_URL + `external-images/${path}/` + fileName;
+
+                // Generate images for all points in this case
+                this.caseImages = casePoints.map(idx => {
+                  return {
+                    src: process.env.BASE_URL + `external-images/${path}/` + fileNames[idx],
+                    timeStep: times[idx],
+                    isSelected: idx === index // Mark the clicked point
+                  };
+                });
+
+                // Sort images by time step
+                this.caseImages.sort((a, b) => a.timeStep - b.timeStep);
               }
             }
           });
         } else {
           console.error('Invalid coordinates format:', coordinates);
         }
-        
+
         this.loadingProgress = 100;
       } catch (error) {
         console.error('Error updating chart:', error);
@@ -220,124 +351,39 @@ export default {
         this.isLoading = false;
       }
     },
-    
-    // Zoom in function for button control
-    zoomIn() {
-      if (!this.myChart) return;
-      
-      // Get current axes options
-      const option = this.myChart.getOption();
-      const currentXMin = option.xAxis[0].min;
-      const currentXMax = option.xAxis[0].max;
-      const currentYMin = option.yAxis[0].min;
-      const currentYMax = option.yAxis[0].max;
-      
-      // Calculate new zoom range
-      const xRange = currentXMax - currentXMin;
-      const yRange = currentYMax - currentYMin;
-      const xCenter = (currentXMin + currentXMax) / 2;
-      const yCenter = (currentYMin + currentYMax) / 2;
-      
-      // Apply zoom
-      const newOption = {
-        xAxis: [{
-          min: xCenter - xRange / (2 * this.zoomFactor),
-          max: xCenter + xRange / (2 * this.zoomFactor)
-        }],
-        yAxis: [{
-          min: yCenter - yRange / (2 * this.zoomFactor),
-          max: yCenter + yRange / (2 * this.zoomFactor)
-        }]
-      };
-      
-      this.myChart.setOption(newOption);
-      this.zoomLevel *= this.zoomFactor;
-    },
-    
-    // Zoom out function for button control
-    zoomOut() {
-      if (!this.myChart) return;
-      
-      // Get current axes options
-      const option = this.myChart.getOption();
-      const currentXMin = option.xAxis[0].min;
-      const currentXMax = option.xAxis[0].max;
-      const currentYMin = option.yAxis[0].min;
-      const currentYMax = option.yAxis[0].max;
-      
-      // Calculate new zoom range
-      const xRange = currentXMax - currentXMin;
-      const yRange = currentYMax - currentYMin;
-      const xCenter = (currentXMin + currentXMax) / 2;
-      const yCenter = (currentYMin + currentYMax) / 2;
-      
-      // Apply zoom
-      const newOption = {
-        xAxis: [{
-          min: xCenter - xRange * this.zoomFactor / 2,
-          max: xCenter + xRange * this.zoomFactor / 2
-        }],
-        yAxis: [{
-          min: yCenter - yRange * this.zoomFactor / 2,
-          max: yCenter + yRange * this.zoomFactor / 2
-        }]
-      };
-      
-      this.myChart.setOption(newOption);
-      this.zoomLevel /= this.zoomFactor;
-    },
-    
-    // Reset zoom to original view
-    resetZoom() {
-      if (!this.myChart || !this.originalOption) return;
-      
-      const resetOption = {
-        xAxis: [{
-          min: null,
-          max: null
-        }],
-        yAxis: [{
-          min: null,
-          max: null
-        }]
-      };
-      
-      this.myChart.setOption(resetOption);
-      this.zoomLevel = 1;
-    },
-    
+
     // Build a map of case names to their point indices
     buildCaseMap(cases) {
       const caseMap = {};
-      
+
       cases.forEach((caseName, index) => {
         if (!caseMap[caseName]) {
           caseMap[caseName] = [];
         }
         caseMap[caseName].push(index);
       });
-      
+
       return caseMap;
     },
-    
+
     clearSelection() {
-      if (this.selectedCaseSeries && this.myChart) {
+      // Add safety check
+      if (this.selectedCaseSeries && this.myChart && !this.myChart.isDisposed()) {
         // Reset to original visualization without highlighted case line
-        // const currentOption = this.myChart.getOption();
-        // Preserve current zoom level when clearing selection
         const resetOption = {
           series: this.originalOption.series
         };
-        
+
         this.myChart.setOption(resetOption);
         this.selectedPoint = null;
         this.selectedImage = null;
         this.selectedCaseName = null;
         this.selectedTimeStep = null;
         this.selectedCaseSeries = null;
+        this.caseImages = [];
       }
     },
-    
+
     async fetchCoordinates() {
       try {
         const response = await axios.post('http://localhost:5000/coordinates', this.graphObj);
@@ -349,31 +395,104 @@ export default {
     }
   },
   mounted() {
-    // Initialize the chart when the component is mounted
-    const chartDom = this.$refs.scatterChart;
-    this.myChart = echarts.init(chartDom);
+    // Store reference to the resize handler
+    this.resizeHandler = () => {
+      if (this.myChart && !this.myChart.isDisposed()) {
+        this.myChart.resize();
+      }
+    };
     
-    // Handle window resize
-    window.addEventListener('resize', () => {
-      this.myChart && this.myChart.resize();
-    });
+    // Add event listener with the stored reference
+    window.addEventListener('resize', this.resizeHandler);
     
-    // Initial chart load
-    this.updateChart();
+    // Rest of mounted code...
+    try {
+      const chartDom = this.$refs.scatterChart;
+      if (chartDom) {
+        this.myChart = echarts.init(chartDom);
+  
+        // Initial chart load
+        this.updateChart();
+      } else {
+        console.error('Chart DOM element not found in mounted');
+      }
+    } catch (e) {
+      console.error('Error initializing chart:', e);
+    }
   },
+  
   beforeDestroy() {
-    // Clean up event listeners
-    window.removeEventListener('resize', this.myChart.resize);
-    this.myChart && this.myChart.dispose();
+    // Remove event listener using the same function reference
+    window.removeEventListener('resize', this.resizeHandler);
+    
+    // Dispose chart if it exists and isn't already disposed
+    if (this.myChart && !this.myChart.isDisposed()) {
+      this.myChart.dispose();
+      this.myChart = null;
+    }
   }
 };
 </script>
 
 <style scoped>
+/* Add these new styles for the layout */
+.main-container {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
 .chart-container {
+  flex: 3;
   position: relative;
 }
 
+.images-container {
+  flex: 2;
+  overflow-y: auto;
+  /* max-height: 500px; */
+  border-left: 1px solid #ddd;
+  padding-left: 20px;
+}
+
+.images-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0px;
+}
+
+.image-item {
+  border: 2px solid transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.image-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.image-info {
+  padding: 5px;
+  background-color: #f5f5f5;
+  font-size: 12px;
+  text-align: center;
+}
+
+.selected-image {
+  border-color: #ff5500;
+  box-shadow: 0 0 10px rgba(255, 85, 0, 0.5);
+}
+
+.selected-detail-image {
+  max-width: 300px;
+  max-height: 300px;
+  margin-right: 20px;
+}
+
+/* Your existing styles */
 .zoom-controls {
   position: absolute;
   top: 10px;
@@ -437,8 +556,13 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .selected-point-details {
@@ -451,7 +575,7 @@ export default {
 }
 
 .cluster-image {
-  width:50%;
+  width: 50%;
   margin-right: 20px;
 }
 
@@ -476,5 +600,56 @@ h3 {
 
 .clear-button:hover {
   background-color: #d32f2f;
+}
+
+/* New styles for image-with-time and time-label */
+.image-with-time {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.time-label {
+  flex: 0 0 30px;
+  /* Fixed width for time labels */
+  padding: 2px;
+  background-color: #eaeaea;
+  color: #333;
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-right: 1px solid #ddd;
+}
+
+.image-with-time img {
+  flex: 1;
+  max-width: calc(100% - 90px);
+  /* Account for label width + gap */
+  height: auto;
+  display: block;
+}
+
+/* Adjust the image-item to work with the new layout */
+.image-item {
+  border: 2px solid transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.selected-image .image-with-time {
+  background-color: #fff7f2;
+}
+
+.selected-image .time-label {
+  background-color: #ff5500;
+  color: white;
 }
 </style>
