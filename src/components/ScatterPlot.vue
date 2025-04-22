@@ -8,7 +8,17 @@
     <div class="main-container">
       <!-- Left side: Chart -->
       <div class="chart-container">
-        <div ref="scatterChart" style="width: 600px; height: 600px;"></div>
+        <div ref="scatterChart" style="flex: 1; height: 600px;"></div>
+        <!-- Similar trajectories section -->
+        <div v-if="similarCases.length > 0" class="similar-trajectories">
+          <h3>Similar Case Trajectories</h3>
+          <div class="trajectories-container">
+            <div v-for="(similarCase, index) in similarCases" :key="index" class="similar-case">
+              <h4>Case: {{ similarCase.caseName }} (MSE: {{ similarCase.mse.toFixed(2) }})</h4>
+              <div :ref="`similarChart${index}`" class="similar-chart"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Right side: Images -->
@@ -33,8 +43,6 @@
         </div>
       </div>
     </div>
-
-    
   </div>
 </template>
 
@@ -77,6 +85,9 @@ export default {
       zoomFactor: 1.2, // Adjust this value to change zoom intensity
       caseImages: [], // Will hold all images for the selected case
       resizeHandler: null, // Store the resize handler reference
+      case_xys_dict: {}, // Dictionary to hold case names and their corresponding indices
+      similarCases: [], // Will hold similar cases data
+      similarCharts: [], // Will hold references to the chart instances
     };
   },
   methods: {
@@ -122,6 +133,7 @@ export default {
         const times = data.times;
         const cases = data.cases;
         const caseMap = this.buildCaseMap(cases);
+        this.case_xys_dict = data.case_xys_dict;
 
         this.loadingProgress = 80;
 
@@ -319,16 +331,16 @@ export default {
                 this.selectedTimeStep = times[index];
 
                 // Get the component path for images
-                const pathmap = { p: 'p', OH: 'oh', Mach: 'mach' };
-                const path = pathmap[this.graphObj.selectedComponent] || 'p';
+                const pathmap = { p: 'p__crop/', OH: 'external-images/oh/', Mach: 'external-images/'};
+                const path = pathmap[this.graphObj.selectedComponent] || pathmap.p;
 
                 // Generate the image path for the selected point
-                this.selectedImage = process.env.BASE_URL + `external-images/${path}/` + fileName;
+                this.selectedImage = process.env.BASE_URL + path + fileName;
 
                 // Generate images for all points in this case
                 this.caseImages = casePoints.map(idx => {
                   return {
-                    src: process.env.BASE_URL + `external-images/${path}/` + fileNames[idx],
+                    src: process.env.BASE_URL + path + fileNames[idx],
                     timeStep: times[idx],
                     isSelected: idx === index // Mark the clicked point
                   };
@@ -337,6 +349,7 @@ export default {
                 // Sort images by time step
                 this.caseImages.sort((a, b) => a.timeStep - b.timeStep);
               }
+              this.findSimilarCases(caseName, coordinates, cases, times);
             }
           });
         } else {
@@ -367,6 +380,8 @@ export default {
     },
 
     clearSelection() {
+      this.clearSimilarCharts();
+      this.similarCases = [];
       // Add safety check
       if (this.selectedCaseSeries && this.myChart && !this.myChart.isDisposed()) {
         // Reset to original visualization without highlighted case line
@@ -392,7 +407,210 @@ export default {
         console.error('Error fetching coordinates:', error);
         return [];
       }
-    }
+    },
+
+    findSimilarCases(selectedCaseName, allCoordinates, allCases, allTimes) {
+      // Clear previous similar cases and charts
+      this.clearSimilarCharts();
+      this.similarCases = [];
+      
+      if (!selectedCaseName || !this.case_xys_dict[selectedCaseName]) return;
+      
+      // Get the trajectory of the selected case
+      const selectedTrajectory = this.case_xys_dict[selectedCaseName];
+      
+      // Calculate similarity with all other cases
+      const similarities = [];
+      
+      for (const caseName in this.case_xys_dict) {
+        // Skip the selected case
+        if (caseName === selectedCaseName) continue;
+        
+        const caseTrajectory = this.case_xys_dict[caseName];
+        if (!caseTrajectory || caseTrajectory.length === 0) continue;
+        
+        // Calculate mse error
+        const mse = this.calculateTrajectoryMSE(selectedTrajectory, caseTrajectory);
+        
+        similarities.push({
+          caseName,
+          mse,
+          trajectory: caseTrajectory
+        });
+      }
+      
+      // Sort by mse (lower is more similar)
+      similarities.sort((a, b) => a.mse - b.mse);
+      
+      // Take top 3 similar cases
+      this.similarCases = similarities.slice(0, 3);
+      
+      // Render the similar case charts after DOM update
+      this.$nextTick(() => {
+        this.renderSimilarCharts(allCoordinates, allCases, allTimes);
+      });
+    },
+    
+    // Calculate trajectory similarity using Mean Squared Error between points
+    calculateTrajectoryMSE(trajectory1, trajectory2) {
+      // Need to align trajectories for comparison
+      // First, ensure both have the same number of points by sampling
+      const targetLength = Math.min(
+        Math.max(trajectory1.length, trajectory2.length),
+        50  // Cap maximum points to consider for performance
+      );
+      
+      // Sample both trajectories to have equal number of points
+      const sampledTrajectory1 = this.sampleTrajectory(trajectory1, targetLength);
+      const sampledTrajectory2 = this.sampleTrajectory(trajectory2, targetLength);
+      
+      // Calculate MSE between corresponding points
+      let totalSquaredError = 0;
+      
+      for (let i = 0; i < targetLength; i++) {
+        const p1 = sampledTrajectory1[i];
+        const p2 = sampledTrajectory2[i];
+        
+        // Calculate squared error between points
+        const dx = p1[0] - p2[0];
+        const dy = p1[1] - p2[1];
+        totalSquaredError += dx * dx + dy * dy;
+      }
+      
+      // Calculate MSE
+      const mse = totalSquaredError / targetLength;
+      
+      return mse;
+    },
+
+    // Sample trajectory to have exactly targetLength points evenly distributed
+    sampleTrajectory(trajectory, targetLength) {
+      if (trajectory.length === targetLength) {
+        return [...trajectory]; // Return a copy to avoid modifying original
+      }
+      
+      const result = [];
+      
+      if (targetLength === 1) {
+        // If target length is 1, return middle point
+        return [trajectory[Math.floor(trajectory.length / 2)]];
+      }
+      
+      // Linear interpolation between points
+      for (let i = 0; i < targetLength; i++) {
+        // Calculate the position in the original trajectory
+        const position = (i / (targetLength - 1)) * (trajectory.length - 1);
+        const index = Math.floor(position);
+        const fraction = position - index;
+        
+        if (index >= trajectory.length - 1) {
+          // Last point
+          result.push(trajectory[trajectory.length - 1]);
+        } else {
+          // Interpolate between two points
+          const point1 = trajectory[index];
+          const point2 = trajectory[index + 1];
+          
+          const x = point1[0] + fraction * (point2[0] - point1[0]);
+          const y = point1[1] + fraction * (point2[1] - point1[1]);
+          
+          result.push([x, y]);
+        }
+      }
+      
+      return result;
+    },
+    
+    // Render the similar case charts
+    renderSimilarCharts(allCoordinates) {
+      // Clear previous charts
+      this.clearSimilarCharts();
+      
+      // Create charts for each similar case
+      this.similarCases.forEach((similarCase, index) => {
+        const chartDom = this.$refs[`similarChart${index}`][0];
+        if (!chartDom) return;
+        
+        const chart = echarts.init(chartDom);
+        
+        // Create a smaller version of the main chart
+        const option = {
+          grid: {
+            top: '5%',
+            left: '5%',
+            right: '5%',
+            bottom: '5%',
+            containLabel: true
+          },
+          tooltip: {
+            trigger: 'item',
+            formatter: function(params) {
+              if (params.seriesName === 'Background') {
+                return 'Background Point';
+              } else {
+                return `Case: ${similarCase.caseName}`;
+              }
+            }
+          },
+          xAxis: {
+            type: 'value',
+            scale: true,
+            splitLine: {
+              lineStyle: { type: 'dashed' }
+            }
+          },
+          yAxis: {
+            type: 'value',
+            scale: true,
+            splitLine: {
+              lineStyle: { type: 'dashed' }
+            }
+          },
+          series: [
+            // Background points (all points with reduced opacity)
+            {
+              name: 'Background',
+              type: 'scatter',
+              data: allCoordinates,
+              symbolSize: 3,
+              itemStyle: {
+                color: 'rgba(200, 200, 200, 0.3)'
+              },
+              z: 1
+            },
+            // The similar case line
+            {
+              name: 'Trajectory',
+              type: 'line',
+              data: similarCase.trajectory,
+              lineStyle: {
+                color: '#3366cc',
+                width: 2
+              },
+              symbol: 'circle',
+              symbolSize: 6,
+              itemStyle: {
+                color: '#3366cc'
+              },
+              z: 10
+            }
+          ]
+        };
+        
+        chart.setOption(option);
+        this.similarCharts.push(chart);
+      });
+    },
+    
+    // Clear similar charts to prevent memory leaks
+    clearSimilarCharts() {
+      this.similarCharts.forEach(chart => {
+        if (chart && !chart.isDisposed()) {
+          chart.dispose();
+        }
+      });
+      this.similarCharts = [];
+    },
   },
   mounted() {
     // Store reference to the resize handler
@@ -422,6 +640,7 @@ export default {
   },
   
   beforeDestroy() {
+    this.clearSimilarCharts();
     // Remove event listener using the same function reference
     window.removeEventListener('resize', this.resizeHandler);
     
@@ -651,5 +870,50 @@ h3 {
 .selected-image .time-label {
   background-color: #ff5500;
   color: white;
+}
+
+/* Add these styles for the similar trajectories section */
+.similar-trajectories {
+  margin-top: 30px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+.trajectories-container {
+  display: flex;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.similar-case {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.similar-chart {
+  width: 100%;
+  height: 250px;
+}
+
+h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #333;
+  text-align: center;
+}
+
+/* Responsive layout for smaller screens */
+@media (max-width: 1200px) {
+  .trajectories-container {
+    flex-direction: column;
+  }
+
+  .similar-case {
+    margin-bottom: 20px;
+  }
 }
 </style>
