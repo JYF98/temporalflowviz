@@ -10,7 +10,7 @@
       <div class="chart-container">
         <div ref="scatterChart" style="flex: 1; height: 600px;"></div>
         <!-- Similar trajectories section -->
-        <div v-if="similarCases.length > 0" class="similar-trajectories">
+        <div class="similar-trajectories">
           <h3>Similar Case Trajectories</h3>
           <div class="trajectories-container">
             <div v-for="(similarCase, index) in similarCases" :key="index" class="similar-case">
@@ -331,7 +331,7 @@ export default {
                 this.selectedTimeStep = times[index];
 
                 // Get the component path for images
-                const pathmap = { p: 'p__crop/', OH: 'external-images/oh/', Mach: 'external-images/'};
+                const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/'};
                 const path = pathmap[this.graphObj.selectedComponent] || pathmap.p;
 
                 // Generate the image path for the selected point
@@ -657,6 +657,7 @@ export default {
 /* Add these new styles for the layout */
 .main-container {
   display: flex;
+  width: 100%;
   gap: 20px;
   margin-bottom: 20px;
 }
