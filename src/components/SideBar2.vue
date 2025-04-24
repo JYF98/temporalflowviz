@@ -121,7 +121,7 @@
 
 <style>
 .el-menu-vertical-demo:not(.el-menu--collapse) {
-  width: 450px;
+  width: 400px;
   min-height: 400px;
 }
 

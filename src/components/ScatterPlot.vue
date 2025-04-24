@@ -22,7 +22,7 @@
       </div>
 
       <!-- Right side: Images -->
-      <div class="images-container" v-if="selectedCaseName">
+      <div class="images-container">
         <div class="images-grid">
           <div v-for="(image, index) in caseImages" :key="index" class="image-item"
             :class="{ 'selected-image': image.isSelected }">
@@ -306,7 +306,7 @@ export default {
                       symbol: 'none', // Remove symbols on the line itself
                       z: 10 // Place line above background points
                     },
-                    // Add highlighted points as a separate series (highest z-index)
+                    // // Add highlighted points as a separate series (highest z-index)
                     // {
                     //   id: 'case-points',
                     //   type: 'scatter',
@@ -663,12 +663,12 @@ export default {
 }
 
 .chart-container {
-  flex: 3;
+  flex: 2;
   position: relative;
 }
 
 .images-container {
-  flex: 2;
+  flex: 1;
   overflow-y: auto;
   /* max-height: 500px; */
   border-left: 1px solid #ddd;
