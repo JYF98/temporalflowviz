@@ -23,6 +23,14 @@
 
       <!-- Right side: Images -->
       <div class="images-container">
+        <div v-if="selectedPoint !== null" class="selected-point-details">
+          <div class="point-info">
+            <h3>Case: {{ selectedCaseName }}</h3>
+            <!-- <p>Time step: {{ selectedTimeStep }}</p> -->
+            <button @click="clearSelection" class="clear-button">Clear Selection</button>
+          </div>
+          <!-- <img v-if="selectedImage" :src="selectedImage" alt="Cluster image" class="selected-detail-image" /> -->
+        </div>
         <div class="images-grid">
           <div v-for="(image, index) in caseImages" :key="index" class="image-item"
             :class="{ 'selected-image': image.isSelected }">
@@ -30,15 +38,6 @@
               <div class="time-label">{{ image.timeStep }}</div>
               <img :src="image.src" :alt="`${image.timeStep}`" />
             </div>
-          </div>
-        </div>
-        <!-- Keep your existing selected point details for the bottom section -->
-        <div v-if="selectedPoint !== null" class="selected-point-details">
-          <img v-if="selectedImage" :src="selectedImage" alt="Cluster image" class="selected-detail-image" />
-          <div class="point-info">
-            <p>Case: {{ selectedCaseName }}</p>
-            <p>Time step: {{ selectedTimeStep }}</p>
-            <button @click="clearSelection" class="clear-button">Clear Selection</button>
           </div>
         </div>
       </div>
@@ -86,6 +85,10 @@ export default {
       caseImages: [], // Will hold all images for the selected case
       resizeHandler: null, // Store the resize handler reference
       case_xys_dict: {}, // Dictionary to hold case names and their corresponding indices
+      fileNames: [], // Will hold filenames of the points
+      labels: [], // Will hold cluster labels
+      cases: [], // Will hold case names
+      times: [], // Will hold time steps
       similarCases: [], // Will hold similar cases data
       similarCharts: [], // Will hold references to the chart instances
     };
@@ -127,12 +130,12 @@ export default {
 
         this.loadingProgress = 60;
         const coordinates = data.tsne_xys;
-        const labels = data.labels;
+        this.labels = data.labels;
         const cluster_count = data.cluster_count;
-        const fileNames = data.fnames;
-        const times = data.times;
-        const cases = data.cases;
-        const caseMap = this.buildCaseMap(cases);
+        this.fileNames = data.fnames;
+        this.times = data.times;
+        this.cases = data.cases;
+        const caseMap = this.buildCaseMap(this.cases);
         this.case_xys_dict = data.case_xys_dict;
 
         this.loadingProgress = 80;
@@ -144,11 +147,11 @@ export default {
             },
             tooltip: {
               trigger: 'item',
-              formatter: function (params) {
+              formatter: (params) => {
                 const index = params.dataIndex;
-                const caseName = cases[index];
-                const timeStep = times[index];
-                return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${labels[index]}`;
+                const caseName = this.cases[index];
+                const timeStep = this.times[index];
+                return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${this.labels[index]}`;
               }
             },
             grid: {
@@ -181,21 +184,21 @@ export default {
                 }
               }
             },
-            toolbox: {
-              feature: {
-                dataZoom: {
-                  yAxisIndex: 'none',
-                  title: {
-                    zoom: 'Zoom',
-                    back: 'Reset Zoom'
-                  }
-                },
-                restore: { title: 'Reset' },
-                saveAsImage: { title: 'Save as Image' }
-              },
-              right: 20,
-              top: 25
-            },
+            // toolbox: {
+            //   feature: {
+            //     dataZoom: {
+            //       yAxisIndex: 'none',
+            //       title: {
+            //         zoom: 'Zoom',
+            //         back: 'Reset Zoom'
+            //       }
+            //     },
+            //     restore: { title: 'Reset' },
+            //     saveAsImage: { title: 'Save as Image' }
+            //   },
+            //   right: 20,
+            //   top: 25
+            // },
             dataZoom: [
               {
                 id: 'dataZoomX',
@@ -245,10 +248,10 @@ export default {
               data: coordinates,
               symbolSize: 5,
               itemStyle: {
-                color: function (params) {
-                  const clusterIndex = labels[params.dataIndex];
+                color: (params) => {
+                  const clusterIndex = this.labels[params.dataIndex];
                   return clusterIndex < cluster_count ? `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)` : '#000';
-                }
+                },
               }
             }]
           };
@@ -271,15 +274,15 @@ export default {
           this.myChart.on('click', (params) => {
             if (params.componentType === 'series') {
               const index = params.dataIndex;
-              const fileName = fileNames[index];
-              const caseName = cases[index]; // Extract case name from filename
+              const fileName = this.fileNames[index];
+              const caseName = this.cases[index]; // Extract case name from filename
 
               // Find all points from the same case
               const casePoints = caseMap[caseName] || [];
 
               if (casePoints.length > 0) {
                 // Sort points by time
-                casePoints.sort((a, b) => times[a] - times[b]);
+                casePoints.sort((a, b) => this.times[a] - this.times[b]);
 
                 // Extract coordinates for the line
                 const lineCoordinates = casePoints.map(idx => coordinates[idx]);
@@ -291,7 +294,14 @@ export default {
                     {
                       id: 'main-scatter',
                       type: 'scatter',
-                      symbolSize: 5,
+                      data: coordinates,
+                      symbolSize: (params) => {
+                        // Check if this point belongs to the selected case
+                        if (this.cases[params.dataIndex] === caseName) {
+                          return 15; // Bigger symbol size for selected case points
+                        }
+                        return 5; // Default size for other points
+                      },
                       z: 5 // Keep regular points in middle layer
                     },
                     // Add connecting line first (lowest z-index of active elements)
@@ -303,8 +313,15 @@ export default {
                         color: '#000000',
                         width: 2
                       },
-                      symbol: 'none', // Remove symbols on the line itself
-                      z: 10 // Place line above background points
+                      symbol: 'circle',
+                      symbolSize: 10,
+                      itemStyle: {
+                        color: '#000000'
+                      },
+                      tooltip: {
+                        show: false // Disable tooltip for the line
+                      },
+                      z: 0 // Place line below background points
                     },
                     // // Add highlighted points as a separate series (highest z-index)
                     // {
@@ -328,7 +345,7 @@ export default {
                 // Update selected point info
                 this.selectedPoint = index;
                 this.selectedCaseName = caseName;
-                this.selectedTimeStep = times[index];
+                this.selectedTimeStep = this.times[index];
 
                 // Get the component path for images
                 const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/'};
@@ -340,8 +357,8 @@ export default {
                 // Generate images for all points in this case
                 this.caseImages = casePoints.map(idx => {
                   return {
-                    src: process.env.BASE_URL + path + fileNames[idx],
-                    timeStep: times[idx],
+                    src: process.env.BASE_URL + path + this.fileNames[idx],
+                    timeStep: this.times[idx],
                     isSelected: idx === index // Mark the clicked point
                   };
                 });
@@ -349,7 +366,7 @@ export default {
                 // Sort images by time step
                 this.caseImages.sort((a, b) => a.timeStep - b.timeStep);
               }
-              this.findSimilarCases(caseName, coordinates, cases, times);
+              this.findSimilarCases(caseName, coordinates);
             }
           });
         } else {
@@ -409,7 +426,7 @@ export default {
       }
     },
 
-    findSimilarCases(selectedCaseName, allCoordinates, allCases, allTimes) {
+    findSimilarCases(selectedCaseName, allCoordinates) {
       // Clear previous similar cases and charts
       this.clearSimilarCharts();
       this.similarCases = [];
@@ -447,7 +464,7 @@ export default {
       
       // Render the similar case charts after DOM update
       this.$nextTick(() => {
-        this.renderSimilarCharts(allCoordinates, allCases, allTimes);
+        this.renderSimilarCharts(allCoordinates);
       });
     },
     
@@ -544,11 +561,17 @@ export default {
           },
           tooltip: {
             trigger: 'item',
-            formatter: function(params) {
+            formatter: (params) => {
               if (params.seriesName === 'Background') {
-                return 'Background Point';
+                const index = params.dataIndex;
+                const caseName = this.cases[index];
+                const timeStep = this.times[index];
+                return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${this.labels[index]}`;
               } else {
-                return `Case: ${similarCase.caseName}`;
+                const caseMap = this.buildCaseMap(this.cases);
+                index = caseMap[similarCase.caseName][params.dataIndex];
+                // This is for the Trajectory series
+                return `Point ${params.dataIndex + 1} in ${similarCase.caseName}<br/>Cluster: ${this.labels[index]}`;
               }
             }
           },
@@ -572,7 +595,13 @@ export default {
               name: 'Background',
               type: 'scatter',
               data: allCoordinates,
-              symbolSize: 3,
+              symbolSize: (params) => {
+                // Check if this point belongs to the selected case
+                if (this.cases[params.dataIndex] === similarCase.caseName) {
+                  return 6; // Bigger symbol size for selected case points
+                }
+                return 3; // Default size for other points
+              },
               itemStyle: {
                 color: 'rgba(200, 200, 200, 0.3)'
               },
@@ -598,6 +627,33 @@ export default {
         };
         
         chart.setOption(option);
+        chart.on('click', (params) => {
+          if (params.componentType === 'series') {
+            let index = params.dataIndex;
+            const caseMap = this.buildCaseMap(this.cases);
+            const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/'};
+            const path = pathmap[this.graphObj.selectedComponent] || pathmap.p;
+            if (params.seriesName === 'Trajectory') {
+              index = caseMap[similarCase.caseName][index];
+            }
+            this.selectedPoint = index;
+            this.selectedTimeStep = this.times[index]
+
+            // Generate the image path for the selected point
+            this.selectedImage = process.env.BASE_URL + path + this.fileNames[index];
+            this.selectedCaseName = this.cases[index];
+
+            // Generate images for all points in this case
+            this.caseImages = caseMap[this.selectedCaseName].map(idx => {
+              return {
+                src: process.env.BASE_URL + path + this.fileNames[idx],
+                timeStep: this.times[idx],
+                isSelected: idx === index // Mark the clicked point
+              };
+            });
+            this.caseImages.sort((a, b) => a.timeStep - b.timeStep);
+          }
+        });
         this.similarCharts.push(chart);
       });
     },
@@ -891,7 +947,7 @@ h3 {
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 10px;
-  background-color: #f9f9f9;
+  /* background-color: #f9f9f9; */
 }
 
 .similar-chart {
