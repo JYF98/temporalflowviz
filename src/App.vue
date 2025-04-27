@@ -50,18 +50,28 @@ export default {
 </script>
 
 <style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* Prevents scrollbars */
+}
+
 #app {
   display: flex;
+  height: 100vh; /* Use viewport height instead of percentage */
+  overflow: hidden; /* Prevents scrolling on the main container */
 }
 
 .main-content {
   display: flex;
   flex-direction: row;
   width: 100%;
+  height: 100%; /* This now works because parent has explicit height */
 }
 
 .chart-container {
   flex-grow: 1;
-  /* margin-left: 100px; Make space for the sidebar */
+  overflow: auto; /* Add scrolling here if needed */
 }
 </style>

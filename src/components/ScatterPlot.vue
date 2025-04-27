@@ -3,18 +3,17 @@
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-spinner"></div>
       <div class="loading-text">Loading chart data...</div>
-      <div class="loading-progress">{{ loadingProgress }}%</div>
     </div>
     <div class="main-container">
       <!-- Left side: Chart -->
       <div class="chart-container">
-        <div ref="scatterChart" style="flex: 1; height: 600px;"></div>
+        <div ref="scatterChart" style="flex: 1; height: 500px;"></div>
         <!-- Similar trajectories section -->
         <div class="similar-trajectories">
           <h3>Similar Case Trajectories</h3>
           <div class="trajectories-container">
             <div v-for="(similarCase, index) in similarCases" :key="index" class="similar-case">
-              <h4>Case: {{ similarCase.caseName }} (MSE: {{ similarCase.mse.toFixed(2) }})</h4>
+              <h4>{{ similarCase.caseName }} (MSE: {{ similarCase.mse.toFixed(2) }})</h4>
               <div :ref="`similarChart${index}`" class="similar-chart"></div>
             </div>
           </div>
@@ -25,11 +24,9 @@
       <div class="images-container">
         <div v-if="selectedPoint !== null" class="selected-point-details">
           <div class="point-info">
-            <h3>Case: {{ selectedCaseName }}</h3>
-            <!-- <p>Time step: {{ selectedTimeStep }}</p> -->
+            <span>Case: {{ selectedCaseName }} Time: {{ selectedTimeStep }}</span>
             <button @click="clearSelection" class="clear-button">Clear Selection</button>
           </div>
-          <!-- <img v-if="selectedImage" :src="selectedImage" alt="Cluster image" class="selected-detail-image" /> -->
         </div>
         <div class="images-grid">
           <div v-for="(image, index) in caseImages" :key="index" class="image-item"
@@ -59,15 +56,11 @@ export default {
   },
   watch: {
     graphObj: {
-      handler(newVal, oldVal) {
-        console.log('graphObj changed:', 
-          oldVal?.selectedComponent, 
-          '->', 
-          newVal?.selectedComponent);
+      handler() {
         this.updateChart();
       },
       deep: true
-    }
+    } 
   },
   data: function () {
     return {
@@ -78,10 +71,7 @@ export default {
       selectedTimeStep: null,
       selectedCaseSeries: null,
       isLoading: false,
-      loadingProgress: 0,
       originalOption: null,
-      zoomLevel: 1,
-      zoomFactor: 1.2, // Adjust this value to change zoom intensity
       caseImages: [], // Will hold all images for the selected case
       resizeHandler: null, // Store the resize handler reference
       case_xys_dict: {}, // Dictionary to hold case names and their corresponding indices
@@ -98,18 +88,17 @@ export default {
       try {
         // Start loading state
         this.isLoading = true;
-        console.log('Updating chart with component:', this.graphObj.selectedComponent);
 
         // Clear any previous selection
         this.clearSelection();
-        
+
         // Important: Check if chart was disposed and needs recreation
         if (!this.myChart || this.myChart.isDisposed()) {
           console.log('Chart was disposed, recreating...');
           const chartDom = this.$refs.scatterChart;
           if (chartDom) {
             this.myChart = echarts.init(chartDom);
-            
+
             // Re-attach event listeners
             this.myChart.on('datazoom', () => {
               if (this.selectedCaseSeries) {
@@ -125,10 +114,7 @@ export default {
         }
 
         // Fetch data
-        this.loadingProgress = 30;
         const data = await this.fetchCoordinates();
-
-        this.loadingProgress = 60;
         const coordinates = data.tsne_xys;
         this.labels = data.labels;
         const cluster_count = data.cluster_count;
@@ -137,8 +123,6 @@ export default {
         this.cases = data.cases;
         const caseMap = this.buildCaseMap(this.cases);
         this.case_xys_dict = data.case_xys_dict;
-
-        this.loadingProgress = 80;
 
         if (Array.isArray(coordinates) && coordinates.length > 0) {
           const option = {
@@ -155,17 +139,18 @@ export default {
               }
             },
             grid: {
-              left: '10%',
-              right: '15%',
-              bottom: '15%',
-              containLabel: true
+              left: '0%',
+              right: '0%',
+              bottom: '0%',
+              top: '0%',
+              containLabel: false
             },
             xAxis: {
               type: 'value',
               scale: true,
               name: 'X-axis',
               nameLocation: 'middle',
-              nameGap: 30,
+              nameGap: 10,
               splitLine: {
                 lineStyle: {
                   type: 'dashed'
@@ -177,49 +162,14 @@ export default {
               scale: true,
               name: 'Y-axis',
               nameLocation: 'middle',
-              nameGap: 30,
+              nameGap: 10,
               splitLine: {
                 lineStyle: {
                   type: 'dashed'
                 }
               }
             },
-            // toolbox: {
-            //   feature: {
-            //     dataZoom: {
-            //       yAxisIndex: 'none',
-            //       title: {
-            //         zoom: 'Zoom',
-            //         back: 'Reset Zoom'
-            //       }
-            //     },
-            //     restore: { title: 'Reset' },
-            //     saveAsImage: { title: 'Save as Image' }
-            //   },
-            //   right: 20,
-            //   top: 25
-            // },
             dataZoom: [
-              {
-                id: 'dataZoomX',
-                type: 'slider',
-                xAxisIndex: 0,
-                filterMode: 'none', // Key setting - preserve all data points
-                start: 0,
-                end: 100,
-                bottom: 10,
-                height: 20
-              },
-              {
-                id: 'dataZoomY',
-                type: 'slider',
-                yAxisIndex: 0,
-                filterMode: 'none', // Key setting - preserve all data points
-                start: 0,
-                end: 100,
-                right: 10,
-                width: 20
-              },
               {
                 type: 'inside',
                 xAxisIndex: 0,
@@ -235,12 +185,6 @@ export default {
                 end: 100
               }
             ],
-            // legend: {
-            //   data: ['Scatter Data', 'Selected Case'],
-            //   right: 10,
-            //   top: 'center',
-            //   orient: 'vertical'
-            // },
             series: [{
               name: 'Scatter Data',
               type: 'scatter',
@@ -258,8 +202,6 @@ export default {
 
           // Store the original option for resetting view
           this.originalOption = JSON.parse(JSON.stringify(option));
-
-          this.loadingProgress = 90;
           this.myChart.setOption(option);
 
           // Add the datazoom event handler to handle the line visibility during zoom
@@ -313,29 +255,12 @@ export default {
                         color: '#000000',
                         width: 2
                       },
-                      symbol: 'circle',
-                      symbolSize: 10,
-                      itemStyle: {
-                        color: '#000000'
-                      },
+                      symbol: 'none',
                       tooltip: {
                         show: false // Disable tooltip for the line
                       },
-                      z: 0 // Place line below background points
+                      z: 10 // Place line above background points
                     },
-                    // // Add highlighted points as a separate series (highest z-index)
-                    // {
-                    //   id: 'case-points',
-                    //   type: 'scatter',
-                    //   data: lineCoordinates,
-                    //   symbolSize: 8,
-                    //   itemStyle: {
-                    //     color: '#ff5500', // Orange color for highlighted points
-                    //     borderColor: '#ffffff',
-                    //     borderWidth: 1
-                    //   },
-                    //   z: 15 // Place case points above everything
-                    // }
                   ]
                 };
 
@@ -348,10 +273,8 @@ export default {
                 this.selectedTimeStep = this.times[index];
 
                 // Get the component path for images
-                const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/'};
+                const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/' };
                 const path = pathmap[this.graphObj.selectedComponent] || pathmap.p;
-
-                // Generate the image path for the selected point
                 this.selectedImage = process.env.BASE_URL + path + fileName;
 
                 // Generate images for all points in this case
@@ -362,8 +285,6 @@ export default {
                     isSelected: idx === index // Mark the clicked point
                   };
                 });
-
-                // Sort images by time step
                 this.caseImages.sort((a, b) => a.timeStep - b.timeStep);
               }
               this.findSimilarCases(caseName, coordinates);
@@ -372,8 +293,6 @@ export default {
         } else {
           console.error('Invalid coordinates format:', coordinates);
         }
-
-        this.loadingProgress = 100;
       } catch (error) {
         console.error('Error updating chart:', error);
       } finally {
@@ -430,44 +349,44 @@ export default {
       // Clear previous similar cases and charts
       this.clearSimilarCharts();
       this.similarCases = [];
-      
+
       if (!selectedCaseName || !this.case_xys_dict[selectedCaseName]) return;
-      
+
       // Get the trajectory of the selected case
       const selectedTrajectory = this.case_xys_dict[selectedCaseName];
-      
+
       // Calculate similarity with all other cases
       const similarities = [];
-      
+
       for (const caseName in this.case_xys_dict) {
         // Skip the selected case
         if (caseName === selectedCaseName) continue;
-        
+
         const caseTrajectory = this.case_xys_dict[caseName];
         if (!caseTrajectory || caseTrajectory.length === 0) continue;
-        
+
         // Calculate mse error
         const mse = this.calculateTrajectoryMSE(selectedTrajectory, caseTrajectory);
-        
+
         similarities.push({
           caseName,
           mse,
           trajectory: caseTrajectory
         });
       }
-      
+
       // Sort by mse (lower is more similar)
       similarities.sort((a, b) => a.mse - b.mse);
-      
+
       // Take top 3 similar cases
       this.similarCases = similarities.slice(0, 3);
-      
+
       // Render the similar case charts after DOM update
       this.$nextTick(() => {
         this.renderSimilarCharts(allCoordinates);
       });
     },
-    
+
     // Calculate trajectory similarity using Mean Squared Error between points
     calculateTrajectoryMSE(trajectory1, trajectory2) {
       // Need to align trajectories for comparison
@@ -476,27 +395,27 @@ export default {
         Math.max(trajectory1.length, trajectory2.length),
         50  // Cap maximum points to consider for performance
       );
-      
+
       // Sample both trajectories to have equal number of points
       const sampledTrajectory1 = this.sampleTrajectory(trajectory1, targetLength);
       const sampledTrajectory2 = this.sampleTrajectory(trajectory2, targetLength);
-      
+
       // Calculate MSE between corresponding points
       let totalSquaredError = 0;
-      
+
       for (let i = 0; i < targetLength; i++) {
         const p1 = sampledTrajectory1[i];
         const p2 = sampledTrajectory2[i];
-        
+
         // Calculate squared error between points
         const dx = p1[0] - p2[0];
         const dy = p1[1] - p2[1];
         totalSquaredError += dx * dx + dy * dy;
       }
-      
+
       // Calculate MSE
       const mse = totalSquaredError / targetLength;
-      
+
       return mse;
     },
 
@@ -505,21 +424,21 @@ export default {
       if (trajectory.length === targetLength) {
         return [...trajectory]; // Return a copy to avoid modifying original
       }
-      
+
       const result = [];
-      
+
       if (targetLength === 1) {
         // If target length is 1, return middle point
         return [trajectory[Math.floor(trajectory.length / 2)]];
       }
-      
+
       // Linear interpolation between points
       for (let i = 0; i < targetLength; i++) {
         // Calculate the position in the original trajectory
         const position = (i / (targetLength - 1)) * (trajectory.length - 1);
         const index = Math.floor(position);
         const fraction = position - index;
-        
+
         if (index >= trajectory.length - 1) {
           // Last point
           result.push(trajectory[trajectory.length - 1]);
@@ -527,29 +446,29 @@ export default {
           // Interpolate between two points
           const point1 = trajectory[index];
           const point2 = trajectory[index + 1];
-          
+
           const x = point1[0] + fraction * (point2[0] - point1[0]);
           const y = point1[1] + fraction * (point2[1] - point1[1]);
-          
+
           result.push([x, y]);
         }
       }
-      
+
       return result;
     },
-    
+
     // Render the similar case charts
     renderSimilarCharts(allCoordinates) {
       // Clear previous charts
       this.clearSimilarCharts();
-      
+
       // Create charts for each similar case
       this.similarCases.forEach((similarCase, index) => {
         const chartDom = this.$refs[`similarChart${index}`][0];
         if (!chartDom) return;
-        
+
         const chart = echarts.init(chartDom);
-        
+
         // Create a smaller version of the main chart
         const option = {
           grid: {
@@ -557,7 +476,7 @@ export default {
             left: '5%',
             right: '5%',
             bottom: '5%',
-            containLabel: true
+            containLabel: false
           },
           tooltip: {
             trigger: 'item',
@@ -625,13 +544,13 @@ export default {
             }
           ]
         };
-        
+
         chart.setOption(option);
         chart.on('click', (params) => {
           if (params.componentType === 'series') {
             let index = params.dataIndex;
             const caseMap = this.buildCaseMap(this.cases);
-            const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/'};
+            const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/' };
             const path = pathmap[this.graphObj.selectedComponent] || pathmap.p;
             if (params.seriesName === 'Trajectory') {
               index = caseMap[similarCase.caseName][index];
@@ -657,7 +576,7 @@ export default {
         this.similarCharts.push(chart);
       });
     },
-    
+
     // Clear similar charts to prevent memory leaks
     clearSimilarCharts() {
       this.similarCharts.forEach(chart => {
@@ -675,16 +594,16 @@ export default {
         this.myChart.resize();
       }
     };
-    
+
     // Add event listener with the stored reference
     window.addEventListener('resize', this.resizeHandler);
-    
+
     // Rest of mounted code...
     try {
       const chartDom = this.$refs.scatterChart;
       if (chartDom) {
         this.myChart = echarts.init(chartDom);
-  
+
         // Initial chart load
         this.updateChart();
       } else {
@@ -694,12 +613,12 @@ export default {
       console.error('Error initializing chart:', e);
     }
   },
-  
+
   beforeDestroy() {
     this.clearSimilarCharts();
     // Remove event listener using the same function reference
     window.removeEventListener('resize', this.resizeHandler);
-    
+
     // Dispose chart if it exists and isn't already disposed
     if (this.myChart && !this.myChart.isDisposed()) {
       this.myChart.dispose();
@@ -714,6 +633,7 @@ export default {
 .main-container {
   display: flex;
   width: 100%;
+  height: 100%;
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -721,10 +641,12 @@ export default {
 .chart-container {
   flex: 2;
   position: relative;
+  height: auto;
 }
 
 .images-container {
   flex: 1;
+  height: 100%;
   overflow-y: auto;
   /* max-height: 500px; */
   border-left: 1px solid #ddd;
@@ -778,24 +700,6 @@ export default {
   z-index: 5;
 }
 
-.zoom-button {
-  width: 30px;
-  height: 30px;
-  margin-bottom: 5px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.zoom-button:hover {
-  background-color: rgba(240, 240, 240, 0.9);
-}
-
 .loading-overlay {
   position: absolute;
   top: 0;
@@ -842,17 +746,12 @@ export default {
 }
 
 .selected-point-details {
-  margin-top: 20px;
-  padding: 15px;
+  margin-top: 10px;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
   display: flex;
   align-items: center;
-}
-
-.cluster-image {
-  width: 50%;
-  margin-right: 20px;
 }
 
 .point-info {
@@ -861,17 +760,17 @@ export default {
 
 h3 {
   margin-top: 0;
-  margin-bottom: 15px;
+  margin-bottom: 5px;
 }
 
 .clear-button {
   background-color: #f44336;
   color: white;
   border: none;
-  padding: 8px 12px;
+  padding: 8px 8px;
   border-radius: 4px;
   cursor: pointer;
-  margin-top: 10px;
+  /* margin-top: 10px; */
 }
 
 .clear-button:hover {
@@ -931,15 +830,15 @@ h3 {
 
 /* Add these styles for the similar trajectories section */
 .similar-trajectories {
-  margin-top: 30px;
+  margin-top: 5px;
   border-top: 1px solid #ddd;
-  padding-top: 20px;
+  padding-top: 5px;
 }
 
 .trajectories-container {
   display: flex;
-  gap: 20px;
-  margin-top: 15px;
+  gap: 10px;
+  margin-top: 5px;
 }
 
 .similar-case {
@@ -947,18 +846,19 @@ h3 {
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 10px;
+  height: auto;
   /* background-color: #f9f9f9; */
 }
 
 .similar-chart {
   width: 100%;
-  height: 250px;
+  height: 200px
 }
 
 h4 {
   margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 14px;
+  margin-bottom: 5px;
+  font-size: 12 px;
   color: #333;
   text-align: center;
 }

@@ -122,7 +122,7 @@
 <style>
 .el-menu-vertical-demo:not(.el-menu--collapse) {
   width: 400px;
-  min-height: 400px;
+  height: auto;
 }
 
 .el-row {
