@@ -122,14 +122,18 @@
       <el-menu-item index="4">
         <el-upload
           ref="upload"
-          action="localhost:5000/imgsearch/"
+          :limit=1
+          action="http://localhost:5000/imgsearch/"
+          accept="image/jpeg,image/jpg,image/png"
           :on-preview="handlePreview"
           :on-remove="handleRemove"
+          :on-change="handleLimit"
           :file-list="fileList"
+          list-type="picture-card"
           :auto-upload="false">
-          <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
-          <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
-          <div slot="tip" class="el-upload__tip">只能上传jpg/png文件</div>
+          <el-button slot="trigger" size="small" type="primary">Select Image</el-button>
+          <div slot="tip" class="el-upload__tip">jpg/jpeg/png only</div>
+          <el-button style="margin: 10px auto; display: block;" size="small" type="success" @click="submitUpload">Upload</el-button>
         </el-upload>
       </el-menu-item>
     </el-menu>
@@ -216,6 +220,7 @@ export default {
         eps: 4, // DBSCAN eps
       },
       fileList: [],
+      uploadDisabled: false,
     };
   },
   created() {
@@ -228,6 +233,14 @@ export default {
 
     handleClose(key, keyPath) {
       console.log(key, keyPath);
+    },
+
+    handleLimit(fileList) {
+      if (fileList.length >= 1) {
+        this.uploadDisabled = true;
+      } else {
+        this.uploadDisabled = false;
+      }
     },
 
     emitFilters() {
