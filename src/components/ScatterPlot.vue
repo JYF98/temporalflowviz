@@ -60,7 +60,7 @@ export default {
         this.updateChart();
       },
       deep: true
-    } 
+    }
   },
   data: function () {
     return {
@@ -212,21 +212,17 @@ export default {
             }
           });
 
-          // Using arrow function to preserve 'this' context
           this.myChart.on('click', (params) => {
             if (params.componentType === 'series') {
               const index = params.dataIndex;
               const fileName = this.fileNames[index];
-              const caseName = this.cases[index]; // Extract case name from filename
+              const caseName = this.cases[index];
 
               // Find all points from the same case
               const casePoints = caseMap[caseName] || [];
 
               if (casePoints.length > 0) {
-                // Sort points by time
                 casePoints.sort((a, b) => this.times[a] - this.times[b]);
-
-                // Extract coordinates for the line
                 const lineCoordinates = casePoints.map(idx => coordinates[idx]);
 
                 // Add a line series connecting the points in time order
@@ -237,12 +233,26 @@ export default {
                       id: 'main-scatter',
                       type: 'scatter',
                       data: coordinates,
-                      symbolSize: (params) => {
+                      symbolSize: function (params) {
                         // Check if this point belongs to the selected case
                         if (this.cases[params.dataIndex] === caseName) {
                           return 15; // Bigger symbol size for selected case points
                         }
                         return 5; // Default size for other points
+                      }.bind(this),
+                      itemStyle: {
+                        color: (params) => {
+                          const clusterIndex = this.labels[params.dataIndex];
+                          return clusterIndex < cluster_count ?
+                            `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)` :
+                            '#000';
+                        }
+                      },
+                      emphasis: {
+                        itemStyle: {
+                          borderColor: '#000',
+                          borderWidth: 1
+                        }
                       },
                       z: 5 // Keep regular points in middle layer
                     },
@@ -415,7 +425,6 @@ export default {
 
       // Calculate MSE
       const mse = totalSquaredError / targetLength;
-
       return mse;
     },
 
@@ -424,9 +433,7 @@ export default {
       if (trajectory.length === targetLength) {
         return [...trajectory]; // Return a copy to avoid modifying original
       }
-
       const result = [];
-
       if (targetLength === 1) {
         // If target length is 1, return middle point
         return [trajectory[Math.floor(trajectory.length / 2)]];
@@ -446,14 +453,11 @@ export default {
           // Interpolate between two points
           const point1 = trajectory[index];
           const point2 = trajectory[index + 1];
-
           const x = point1[0] + fraction * (point2[0] - point1[0]);
           const y = point1[1] + fraction * (point2[1] - point1[1]);
-
           result.push([x, y]);
         }
       }
-
       return result;
     },
 
@@ -466,7 +470,6 @@ export default {
       this.similarCases.forEach((similarCase, index) => {
         const chartDom = this.$refs[`similarChart${index}`][0];
         if (!chartDom) return;
-
         const chart = echarts.init(chartDom);
 
         // Create a smaller version of the main chart
@@ -499,6 +502,9 @@ export default {
             scale: true,
             splitLine: {
               lineStyle: { type: 'dashed' }
+            },
+            axisLabel: {
+              show: false // Hide x-axis labels
             }
           },
           yAxis: {
@@ -506,6 +512,9 @@ export default {
             scale: true,
             splitLine: {
               lineStyle: { type: 'dashed' }
+            },
+            axisLabel: {
+              show: false // Hide y-axis labels
             }
           },
           series: [
@@ -598,7 +607,6 @@ export default {
     // Add event listener with the stored reference
     window.addEventListener('resize', this.resizeHandler);
 
-    // Rest of mounted code...
     try {
       const chartDom = this.$refs.scatterChart;
       if (chartDom) {
@@ -629,7 +637,6 @@ export default {
 </script>
 
 <style scoped>
-/* Add these new styles for the layout */
 .main-container {
   display: flex;
   width: 100%;
@@ -647,7 +654,7 @@ export default {
 .images-container {
   flex: 1;
   height: 100%;
-  overflow-y: auto;
+  overflow-y: scroll;
   /* max-height: 500px; */
   border-left: 1px solid #ddd;
   padding-left: 20px;
@@ -690,7 +697,6 @@ export default {
   margin-right: 20px;
 }
 
-/* Your existing styles */
 .zoom-controls {
   position: absolute;
   top: 10px;
@@ -770,6 +776,7 @@ h3 {
   padding: 8px 8px;
   border-radius: 4px;
   cursor: pointer;
+  margin-left: 8px;
   /* margin-top: 10px; */
 }
 
@@ -828,7 +835,6 @@ h3 {
   color: white;
 }
 
-/* Add these styles for the similar trajectories section */
 .similar-trajectories {
   margin-top: 5px;
   border-top: 1px solid #ddd;

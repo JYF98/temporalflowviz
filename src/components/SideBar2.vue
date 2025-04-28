@@ -4,8 +4,8 @@
       <el-radio-button :label="false">Expand</el-radio-button>
       <el-radio-button :label="true">Wrap</el-radio-button>
     </el-radio-group>
-    <el-menu default-active="1-3" class="el-menu-vertical-demo" @open="handleOpen" @close="handleClose"
-      :collapse="isCollapse">
+    <el-menu default-active="2-1" class="el-menu-vertical-demo" @open="handleOpen" @close="handleClose"
+      :collapse="isCollapse" :default-openeds="['1', '2']">
       <el-submenu index="1">
         <template slot="title">
           <i class="el-icon-location"></i>
@@ -63,7 +63,11 @@
       <el-menu-item-group>
         <span slot="title">Selected Cases:</span>
         <template>
-          <el-table ref="multipleTable" :data="cases" tooltip-effect="dark" style="width: 100%" height="300"
+          <el-table ref="multipleTable" :data="cases" tooltip-effect="dark" 
+            style="width: 100%" height="200" 
+            :row-style="{height:0+'px'}"
+            :cell-style="{padding:0+'px'}"
+            :header-cell-style="{padding:'0px'}"
             :hidden="isCollapse" @selection-change="handleSelectionChange">
             <el-table-column type="selection" width="55">
             </el-table-column>
@@ -90,7 +94,7 @@
         <el-menu-item-group>
           <span slot="title">Selected Component:</span>
           <el-menu-item index="2-1">
-            <el-radio-group v-model="graphObj.selectedComponent">
+            <el-radio-group v-model="graphObj.selectedComponent" size="small">
               <el-radio-button label="p">p</el-radio-button>
               <el-radio-button label="OH">OH</el-radio-button>
               <el-radio-button label="Mach">Mach</el-radio-button>
@@ -115,6 +119,19 @@
       <el-menu-item index="3" style="text-align: center;">
         <el-button type="primary" @click="showGraph">Draw Scatter Plot</el-button>
       </el-menu-item>
+      <el-menu-item index="4">
+        <el-upload
+          ref="upload"
+          action="localhost:5000/imgsearch/"
+          :on-preview="handlePreview"
+          :on-remove="handleRemove"
+          :file-list="fileList"
+          :auto-upload="false">
+          <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
+          <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
+          <div slot="tip" class="el-upload__tip">只能上传jpg/png文件</div>
+        </el-upload>
+      </el-menu-item>
     </el-menu>
   </div>
 </template>
@@ -126,7 +143,7 @@
 }
 
 .el-row {
-  margin-bottom: 5px;
+  margin-bottom: 0px;
 
   &:last-child {
     margin-bottom: 0;
@@ -135,6 +152,21 @@
 
 .el-col {
   border-radius: 4px;
+}
+
+.el-table .cell {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* For even more compact rows*/
+.el-table .cell {
+  line-height: 18px;
+}
+
+/* Make the entire table more compact */
+.el-table td, .el-table th {
+  padding: 6px 0;
 }
 
 .bg-purple-dark {
@@ -183,6 +215,7 @@ export default {
         minSamples: 30, // DBSCAN minSamples
         eps: 4, // DBSCAN eps
       },
+      fileList: [],
     };
   },
   created() {
@@ -192,9 +225,11 @@ export default {
     handleOpen(key, keyPath) {
       console.log(key, keyPath);
     },
+
     handleClose(key, keyPath) {
       console.log(key, keyPath);
     },
+
     emitFilters() {
       this.$emit('update-filters', {
         pRange: this.pRange,
@@ -203,6 +238,7 @@ export default {
       });
       this.fetchCases(); // Fetch cases whenever filters are updated
     },
+
     async fetchCases() {
       try {
         //send ranges to backend
@@ -217,6 +253,7 @@ export default {
         console.error('Error fetching cases:', error);
       }
     },
+
     toggleSelection(rows) {
       if (rows) {
         rows.forEach(row => {
@@ -226,15 +263,26 @@ export default {
         this.$refs.multipleTable.clearSelection();
       }
     },
+
     handleSelectionChange(val) {
       this.graphObj.selectedCases = val;
     },
+
     showGraph() {
-      // Create a deep copy of the object using JSON methods
-      const graphObjCopy = JSON.parse(JSON.stringify(this.graphObj));
-      
-      // Send the copy to the parent component
+      const graphObjCopy = JSON.parse(JSON.stringify(this.graphObj)); //deep copy
       this.$emit('show-graph', graphObjCopy);
+    },
+
+    submitUpload() {
+      this.$refs.upload.submit();
+    },
+    
+    handleRemove(file, fileList) {
+      console.log(file, fileList);
+    },
+
+    handlePreview(file) {
+      console.log(file);
     }
   },
   watch: {

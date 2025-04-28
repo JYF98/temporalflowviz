@@ -54,13 +54,13 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden; /* Prevents scrollbars */
+  overflow: auto; 
 }
 
 #app {
   display: flex;
   height: 100vh; /* Use viewport height instead of percentage */
-  overflow: hidden; /* Prevents scrolling on the main container */
+  overflow: auto; 
 }
 
 .main-content {
@@ -72,6 +72,7 @@ html, body {
 
 .chart-container {
   flex-grow: 1;
+  height: 100%; /* Full height of the parent */
   overflow: auto; /* Add scrolling here if needed */
 }
 </style>
