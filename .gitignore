@@ -1,8 +1,7 @@
 .DS_Store
 node_modules
 /dist
-public/imgs
-public/p_cropped_img2
+public/external_images
 
 
 # local env files

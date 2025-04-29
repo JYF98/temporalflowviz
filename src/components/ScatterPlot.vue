@@ -284,7 +284,7 @@ export default {
 
                 // Get the component path for images
                 const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/' };
-                const path = pathmap[this.graphObj.selectedComponent] || pathmap.p;
+                const path = 'external_images/'+(pathmap[this.graphObj.selectedComponent] || pathmap.p);
                 this.selectedImage = process.env.BASE_URL + path + fileName;
 
                 // Generate images for all points in this case
@@ -560,7 +560,7 @@ export default {
             let index = params.dataIndex;
             const caseMap = this.buildCaseMap(this.cases);
             const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/' };
-            const path = pathmap[this.graphObj.selectedComponent] || pathmap.p;
+            const path = 'external_images/' + (pathmap[this.graphObj.selectedComponent] || pathmap.p);
             if (params.seriesName === 'Trajectory') {
               index = caseMap[similarCase.caseName][index];
             }

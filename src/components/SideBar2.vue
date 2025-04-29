@@ -123,7 +123,7 @@
         <el-upload
           ref="upload"
           :limit=1
-          action="http://localhost:5000/imgsearch/"
+          action="http://localhost:5000/imgsearch"
           accept="image/jpeg,image/jpg,image/png"
           :on-preview="handlePreview"
           :on-remove="handleRemove"
