@@ -7,6 +7,15 @@
     <div class="main-container">
       <!-- Left side: Chart -->
       <div class="chart-container">
+        <div class="chart-controls">
+          <button 
+            class="control-button"
+            @click="toggleCentroids"
+            :class="{ 'active': showCentroids }"
+          >
+            {{ showCentroids ? 'Hide Centroids' : 'Show Centroids' }}
+          </button>
+        </div>
         <div ref="scatterChart" style="flex: 1; height: 500px;"></div>
         <!-- Similar trajectories section -->
         <div class="similar-trajectories">
@@ -18,6 +27,25 @@
             </div>
           </div>
         </div>
+        <!-- Add description editor section -->
+        <div v-if="selectedPoint !== null" class="description-section">
+          <h3>Point Description</h3>
+          <!-- <textarea v-model="currentDescription" class="description-textarea"
+            placeholder="No description available for this point" rows="4"></textarea> -->
+          <el-input type="textarea" autosize placeholder="No description available for this point" v-model="currentDescription">
+          </el-input>
+          <div class="description-actions">
+            <el-button type="success" @click="submitDescription" :disabled="!descriptionChanged || submittingDescription">
+              {{ submittingDescription ? 'Submitting...' : 'Save Description' }}
+            </el-button>
+            <el-button type="primary" @click="generateDescription">
+              {{ generatingDescription ? 'Generating...' : 'Generate Description' }}
+            </el-button>
+            <span v-if="descriptionUpdateStatus" class="status-message" :class="descriptionUpdateStatus.type">
+              {{ descriptionUpdateStatus.message }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <!-- Right side: Images -->
@@ -26,6 +54,7 @@
           <div class="point-info">
             <span>Case: {{ selectedCaseName }} Time: {{ selectedTimeStep }}</span>
             <button @click="clearSelection" class="clear-button">Clear Selection</button>
+            <img :src="selectedImage" alt="Selected Image" style="width: 100%; height: auto; display: block;">
           </div>
         </div>
         <div class="images-grid">
@@ -48,12 +77,14 @@ import axios from 'axios';
 
 export default {
   name: 'ScatterPlot',
+
   props: {
     graphObj: {
       type: Object,
       required: true
     },
   },
+
   watch: {
     graphObj: {
       handler() {
@@ -62,6 +93,7 @@ export default {
       deep: true
     }
   },
+
   data: function () {
     return {
       myChart: null,
@@ -79,11 +111,132 @@ export default {
       labels: [], // Will hold cluster labels
       cases: [], // Will hold case names
       times: [], // Will hold time steps
+      iscentroid: [], // Will hold centroid information
+      centroid_indices: [], // Will hold centroid indices
+      showCentroids: false, // Track centroids visibility
+      centroidSeries: null, // Store centroid series for toggling
+      descriptions: [], // Will hold descriptions of the images
       similarCases: [], // Will hold similar cases data
       similarCharts: [], // Will hold references to the chart instances
+      currentDescription: '', // Will hold the current description being edited
+      originalDescription: '', // To track if description has changed
+      submittingDescription: false, // Flag for submission status
+      descriptionUpdateStatus: null, // For status messages
+      generatingDescription: false, // Flag for generating description
     };
   },
+
+  computed: {
+    descriptionChanged() {
+      return this.currentDescription !== this.originalDescription;
+    }
+  },
+
   methods: {
+    toggleCentroids() {
+      this.showCentroids = !this.showCentroids;
+
+      if (this.showCentroids) {
+        this.showClusterCentroids();
+      } else {
+        this.hideClusterCentroids();
+      }
+    },
+
+    showClusterCentroids() {
+      if (!this.myChart || this.myChart.isDisposed() || !Array.isArray(this.iscentroid)) {
+        return;
+      }
+
+      // Get current chart options
+      const currentOption = this.myChart.getOption();
+      const currentSeries = currentOption.series;
+      
+      // Get coordinates of centroids
+      const coordinates = currentOption.series[0].data;
+      const centroidCoordinates = [];
+
+      // Find all centroid points based on iscentroid array
+      this.iscentroid.forEach((isCentroid, index) => {
+        if (isCentroid === true) {
+          centroidCoordinates.push({
+            value: coordinates[index],
+            clusterIndex: this.labels[index]
+          });
+        }
+      });
+
+      if (centroidCoordinates.length === 0) {
+        console.warn('No centroid points found in the data');
+        return;
+      }
+
+      // Create a new series for centroids
+      const centroidSeries = {
+        name: 'Centroids',
+        type: 'scatter',
+        data: centroidCoordinates.map(point => point.value),
+        symbolSize: 20,
+        symbol: 'diamond',
+        itemStyle: {
+          color: (params) => {
+            const clusterIndex = centroidCoordinates[params.dataIndex].clusterIndex;
+            const cluster_count = Math.max(...this.labels) - Math.min(...this.labels) + 1;
+            return `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)`;
+          },
+          borderColor: '#fff',
+          borderWidth: 2,
+          shadowBlur: 10,
+          shadowColor: 'rgba(0, 0, 0, 0.3)'
+        },
+        z: 0,
+        tooltip: {
+          formatter: (params) => {
+            const clusterIndex = centroidCoordinates[params.dataIndex].clusterIndex;
+            const index = this.centroid_indices[params.dataIndex];
+            return `Centroid of Cluster ${clusterIndex}<br/>Case: ${this.cases[index]}<br/>Time: ${this.times[index]}<br/>Cluster: ${this.labels[index]}`;
+          }
+        }
+      };
+
+      // Store the centroid series for later toggling
+      this.centroidSeries = centroidSeries;
+
+      // Add the centroid series to the existing series array
+      // This preserves the original scatter plot
+      const newSeries = [...currentSeries, centroidSeries];
+      
+      // Update the chart with all series
+      this.myChart.setOption({
+        series: newSeries
+      });
+    },
+
+    hideClusterCentroids() {
+      if (!this.myChart || this.myChart.isDisposed()) {
+        return;
+      }
+
+      // Get all current series except the centroid series
+      const option = this.myChart.getOption();
+      
+      // Debug the series names to identify any mismatch
+      console.log('Current series:', option.series.map(s => s.name));
+      
+      // Filter series more robustly to ensure centroids are removed
+      const filteredSeries = option.series.filter(series => {
+        return series.name !== 'Centroids';
+      });
+
+      // Update the chart with the filtered series
+      option.series = filteredSeries;
+      this.myChart.setOption(option, true); // Set true to completely replace series instead of merging
+
+      // Clear the reference
+      this.centroidSeries = null;
+    },
+
+
     async updateChart() {
       try {
         // Start loading state
@@ -123,6 +276,9 @@ export default {
         this.cases = data.cases;
         const caseMap = this.buildCaseMap(this.cases);
         this.case_xys_dict = data.case_xys_dict;
+        this.descriptions = data.descriptions;
+        this.iscentroid = data.iscentroid;
+        this.centroid_indices = data.centroid_indices;
 
         if (Array.isArray(coordinates) && coordinates.length > 0) {
           const option = {
@@ -132,12 +288,14 @@ export default {
             tooltip: {
               trigger: 'item',
               formatter: (params) => {
-                const index = params.dataIndex;
-                const caseName = this.cases[index];
-                const timeStep = this.times[index];
-                return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${this.labels[index]}`;
+                if (params.seriesName === 'Scatter Data') {
+                  const index = params.dataIndex;
+                  const caseName = this.cases[index];
+                  const timeStep = this.times[index];
+                  return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${this.labels[index]}`; // Add cluster info
+                }
               }
-            },
+            },  
             grid: {
               left: '0%',
               right: '0%',
@@ -196,7 +354,7 @@ export default {
                   const clusterIndex = this.labels[params.dataIndex];
                   return clusterIndex < cluster_count ? `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)` : '#000';
                 },
-              }
+              },
             }]
           };
 
@@ -204,26 +362,21 @@ export default {
           this.originalOption = JSON.parse(JSON.stringify(option));
           this.myChart.setOption(option);
 
-          // Add the datazoom event handler to handle the line visibility during zoom
-          this.myChart.on('datazoom', () => {
-            if (this.selectedCaseSeries) {
-              // Re-apply the line series when zooming to keep it visible
-              this.myChart.setOption(this.selectedCaseSeries);
-            }
-          });
-
           this.myChart.on('click', (params) => {
             if (params.componentType === 'series') {
-              const index = params.dataIndex;
+              const index = (params.seriesName === 'Centroids' ? this.centroid_indices[params.dataIndex] : params.dataIndex);
+              console.log('Clicked params.dataIndex: ',params.dataIndex,'Clicked index:', index, 'Series name:', params.seriesName, 'Case:', this.cases[index], 'Time:', this.times[index]);
               const fileName = this.fileNames[index];
               const caseName = this.cases[index];
 
               // Find all points from the same case
               const casePoints = caseMap[caseName] || [];
+              console.log('Case points:', casePoints);
 
               if (casePoints.length > 0) {
                 casePoints.sort((a, b) => this.times[a] - this.times[b]);
                 const lineCoordinates = casePoints.map(idx => coordinates[idx]);
+                console.log('Line coordinates:', lineCoordinates);
 
                 // Add a line series connecting the points in time order
                 const lineOption = {
@@ -233,10 +386,10 @@ export default {
                       id: 'main-scatter',
                       type: 'scatter',
                       data: coordinates,
-                      symbolSize: function (params) {
+                      symbolSize: function (value, params) {
                         // Check if this point belongs to the selected case
-                        if (this.cases[params.dataIndex] === caseName) {
-                          return 15; // Bigger symbol size for selected case points
+                        if (this.cases && this.cases[params.dataIndex] === caseName) {
+                          return 10; // Bigger symbol size for selected case points
                         }
                         return 5; // Default size for other points
                       }.bind(this),
@@ -248,12 +401,12 @@ export default {
                             '#000';
                         }
                       },
-                      emphasis: {
-                        itemStyle: {
-                          borderColor: '#000',
-                          borderWidth: 1
-                        }
-                      },
+                      // emphasis: {
+                      //   itemStyle: {
+                      //     borderColor: '#000',
+                      //     borderWidth: 1
+                      //   }
+                      // },
                       z: 5 // Keep regular points in middle layer
                     },
                     // Add connecting line first (lowest z-index of active elements)
@@ -263,9 +416,11 @@ export default {
                       data: lineCoordinates,
                       lineStyle: {
                         color: '#000000',
-                        width: 2
+                        width: 2,
+                        type: 'solid',
+                        opacity: 0.8
                       },
-                      symbol: 'none',
+                      symbol: 'circle',
                       tooltip: {
                         show: false // Disable tooltip for the line
                       },
@@ -282,9 +437,14 @@ export default {
                 this.selectedCaseName = caseName;
                 this.selectedTimeStep = this.times[index];
 
+                // Set the description for editing
+                this.currentDescription = this.descriptions[index] || '';
+                this.originalDescription = this.currentDescription;
+                this.descriptionUpdateStatus = null; // Reset status message
+
                 // Get the component path for images
                 const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/' };
-                const path = 'external_images/'+(pathmap[this.graphObj.selectedComponent] || pathmap.p);
+                const path = 'external_images/' + (pathmap[this.graphObj.selectedComponent] || pathmap.p);
                 this.selectedImage = process.env.BASE_URL + path + fileName;
 
                 // Generate images for all points in this case
@@ -295,7 +455,7 @@ export default {
                     isSelected: idx === index // Mark the clicked point
                   };
                 });
-                this.caseImages.sort((a, b) => a.timeStep - b.timeStep);
+                // this.caseImages.sort((a, b) => a.timeStep - b.timeStep);
               }
               this.findSimilarCases(caseName, coordinates);
             }
@@ -325,6 +485,111 @@ export default {
       return caseMap;
     },
 
+    async submitDescription() {
+      if (this.selectedPoint === null || !this.descriptionChanged) return;
+
+      this.submittingDescription = true;
+      this.descriptionUpdateStatus = null;
+
+      try {
+        // Get the filename for the current point
+        const fileName = this.fileNames[this.selectedPoint];
+
+        // Send the updated description to the server
+        const response = await axios.post('http://localhost:5000/update_description', {
+          index: this.selectedPoint,
+          fileName: fileName,
+          description: this.currentDescription,
+          component: this.graphObj.selectedComponent
+        });
+
+        if (response.data.success) {
+          // Update the local descriptions array
+          this.descriptions[this.selectedPoint] = this.currentDescription;
+          this.originalDescription = this.currentDescription;
+
+          this.descriptionUpdateStatus = {
+            type: 'success',
+            message: 'Description updated successfully'
+          };
+        } else {
+          this.descriptionUpdateStatus = {
+            type: 'error',
+            message: 'Failed to update description: ' + (response.data.message || 'Unknown error')
+          };
+        }
+      } catch (error) {
+        console.error('Error updating description:', error);
+        this.descriptionUpdateStatus = {
+          type: 'error',
+          message: 'Error updating description: ' + (error.message || 'Network error')
+        };
+      } finally {
+        this.submittingDescription = false;
+
+        // Clear status message after a delay
+        setTimeout(() => {
+          if (this.descriptionUpdateStatus && this.descriptionUpdateStatus.type === 'success') {
+            this.descriptionUpdateStatus = null;
+          }
+        }, 3000);
+      }
+    },
+    
+    async generateDescription() {
+      if (this.selectedPoint === null) return;
+      
+      this.generatingDescription = true;
+      this.descriptionUpdateStatus = null;
+      
+      try {
+        // Get the filename for the current point
+        const fileName = this.fileNames[this.selectedPoint];
+        
+        // Send the request to generate a description
+        const response = await axios.post('http://localhost:5000/generate_description', {
+          index: this.selectedPoint,
+          fileName: fileName,
+          caseName: this.selectedCaseName,
+          timeStep: this.selectedTimeStep,
+          component: this.graphObj.selectedComponent,
+          cluster: this.labels[this.selectedPoint]
+        });
+        
+        if (response.data.success) {
+          // Update the description field with the generated description
+          this.currentDescription = response.data.description;
+          
+          // Don't set originalDescription yet - this allows user to modify before saving
+          // Show success message
+          this.descriptionUpdateStatus = {
+            type: 'success',
+            message: 'Description generated successfully'
+          };
+        } else {
+          this.descriptionUpdateStatus = {
+            type: 'error',
+            message: 'Failed to generate description: ' + (response.data.message || 'Unknown error')
+          };
+        }
+      } catch (error) {
+        console.error('Error generating description:', error);
+        this.descriptionUpdateStatus = {
+          type: 'error',
+          message: 'Error generating description: ' + (error.message || 'Network error')
+        };
+      } finally {
+        this.generatingDescription = false;
+        
+        // Clear success message after a delay
+        setTimeout(() => {
+          if (this.descriptionUpdateStatus && this.descriptionUpdateStatus.type === 'success') {
+            this.descriptionUpdateStatus = null;
+          }
+        }, 3000);
+      }
+    },
+
     clearSelection() {
       this.clearSimilarCharts();
       this.similarCases = [];
@@ -342,12 +607,15 @@ export default {
         this.selectedTimeStep = null;
         this.selectedCaseSeries = null;
         this.caseImages = [];
+        this.currentDescription = '';
+        this.originalDescription = '';
+        this.descriptionUpdateStatus = null;
       }
     },
 
     async fetchCoordinates() {
       try {
-        const response = await axios.post('http://localhost:5000/coordinates', this.graphObj);
+        const response = await axios.post('http://localhost:5000/coordinates_test', this.graphObj);
         return response.data;
       } catch (error) {
         console.error('Error fetching coordinates:', error);
@@ -399,7 +667,6 @@ export default {
 
     // Calculate trajectory similarity using Mean Squared Error between points
     calculateTrajectoryMSE(trajectory1, trajectory2) {
-      // Need to align trajectories for comparison
       // First, ensure both have the same number of points by sampling
       const targetLength = Math.min(
         Math.max(trajectory1.length, trajectory2.length),
@@ -567,6 +834,11 @@ export default {
             this.selectedPoint = index;
             this.selectedTimeStep = this.times[index]
 
+            // Set the description for editing
+            this.currentDescription = this.descriptions[index] || '';
+            this.originalDescription = this.currentDescription;
+            this.descriptionUpdateStatus = null; // Reset status message
+
             // Generate the image path for the selected point
             this.selectedImage = process.env.BASE_URL + path + this.fileNames[index];
             this.selectedCaseName = this.cases[index];
@@ -637,10 +909,37 @@ export default {
 </script>
 
 <style scoped>
+.chart-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  padding: 0 10px;
+}
+
+.control-button {
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.control-button:hover {
+  background-color: #e0e0e0;
+}
+
+.control-button.active {
+  background-color: #4CAF50;
+  color: white;
+  border-color: #3e8e41;
+}
+
 .main-container {
   display: flex;
   width: 100%;
-  height: 100%;
+  /* height: 100%; */
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -653,8 +952,8 @@ export default {
 
 .images-container {
   flex: 1;
-  height: 100%;
-  overflow-y: scroll;
+  /* height: 100%; */
+  /* overflow-y: auto; */
   /* max-height: 500px; */
   border-left: 1px solid #ddd;
   padding-left: 20px;
@@ -867,6 +1166,68 @@ h4 {
   font-size: 12 px;
   color: #333;
   text-align: center;
+}
+
+/* Styles for the description section */
+
+.description-section {
+  margin: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  background-color: #f9f9f9;
+}
+
+.description-textarea {
+  width: 95%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.description-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.submit-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.submit-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.status-message {
+  margin-left: 15px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.success {
+  background-color: #dff0d8;
+  color: #3c763d;
+}
+
+.error {
+  background-color: #f2dede;
+  color: #a94442;
 }
 
 /* Responsive layout for smaller screens */

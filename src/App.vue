@@ -53,26 +53,26 @@ export default {
 html, body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: auto; 
+  /* height: 100%; */
+  /* overflow: auto;  */
 }
 
 #app {
   display: flex;
-  height: 100vh; /* Use viewport height instead of percentage */
-  overflow: auto; 
+  /* height: 100vh; Use viewport height instead of percentage */
+  /* overflow: auto;  */
 }
 
 .main-content {
   display: flex;
   flex-direction: row;
   width: 100%;
-  height: 100%; /* This now works because parent has explicit height */
+  /* height: 100%; This now works because parent has explicit height */
 }
 
 .chart-container {
   flex-grow: 1;
-  height: 100%; /* Full height of the parent */
-  overflow: auto; /* Add scrolling here if needed */
+  /* height: 100%; Full height of the parent */
+  /* overflow: auto; Add scrolling here if needed */
 }
 </style>

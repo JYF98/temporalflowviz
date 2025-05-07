@@ -119,7 +119,7 @@
       <el-menu-item index="3" style="text-align: center;">
         <el-button type="primary" @click="showGraph">Draw Scatter Plot</el-button>
       </el-menu-item>
-      <el-menu-item index="4">
+      <!-- <el-menu-item index="4">
         <el-upload
           ref="upload"
           :limit=1
@@ -135,7 +135,7 @@
           <div slot="tip" class="el-upload__tip">jpg/jpeg/png only</div>
           <el-button style="margin: 10px auto; display: block;" size="small" type="success" @click="submitUpload">Upload</el-button>
         </el-upload>
-      </el-menu-item>
+      </el-menu-item> -->
     </el-menu>
   </div>
 </template>
