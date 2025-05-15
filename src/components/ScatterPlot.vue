@@ -25,12 +25,29 @@
             </div>
           </div>
         </div>
-        <!-- Add description editor section -->
+      </div>
+
+      <!-- Right side: Images -->
+      <div class="images-container">
+        <div v-if="selectedPoint !== null" class="selected-point-details">
+          <div class="point-info">
+            <span>Case: {{ selectedCaseName }} Time: {{ selectedTimeStep }}</span>
+            <button @click="clearSelection" class="clear-button">Clear Selection</button>
+          </div>
+        </div>
+        <div class="images-grid">
+          <div v-for="(image, index) in caseImages" :key="index" class="image-item"
+            :class="{ 'selected-image': image.isSelected }">
+            <div class="image-with-time" @click="imgOnClick(image.timeStep)">
+              <div class="time-label">{{ image.timeStep }}</div>
+              <img :src="image.src" :alt="`${image.timeStep}`" />
+            </div>
+          </div>
+        </div>
+        <!-- Description editor section -->
         <div v-if="selectedPoint !== null" class="description-section">
           <h3>Point Description</h3>
-          <!-- <textarea v-model="currentDescription" class="description-textarea"
-            placeholder="No description available for this point" rows="4"></textarea> -->
-          <el-input type="textarea" rows="6" placeholder="No description available for this point"
+          <el-input type="textarea" rows="8" placeholder="No description available for this point"
             v-model="currentDescription">
           </el-input>
           <div class="description-actions">
@@ -45,24 +62,20 @@
               {{ descriptionUpdateStatus.message }}
             </span>
           </div>
-        </div>
-      </div>
-
-      <!-- Right side: Images -->
-      <div class="images-container">
-        <div v-if="selectedPoint !== null" class="selected-point-details">
-          <div class="point-info">
-            <span>Case: {{ selectedCaseName }} Time: {{ selectedTimeStep }}</span>
-            <button @click="clearSelection" class="clear-button">Clear Selection</button>
-          </div>
-        </div>
-        <div class="images-grid">
-          <div v-for="(image, index) in caseImages" :key="index" class="image-item"
-            :class="{ 'selected-image': image.isSelected }">
-            <div class="image-with-time">
-              <div class="time-label">{{ image.timeStep }}</div>
-              <img :src="image.src" :alt="`${image.timeStep}`" />
-            </div>
+          <h3>Case Description</h3>
+          <el-input type="textarea" rows="8" placeholder="No description available for this case"
+            v-model="caseDescription"></el-input>
+          <div class="description-actions">
+            <el-button type="success" @click="submitCaseDescription"
+              :disabled="!caseDescriptionChanged || submittingCaseDescription">
+              {{ submittingCaseDescription ? 'Submitting...' : 'Save Description' }}
+            </el-button>
+            <el-button type="primary" @click="generateCaseDescription">
+              {{ generatingCaseDescription ? 'Generating...' : 'Generate Description' }}
+            </el-button>
+            <span v-if="caseDescriptionUpdateStatus" class="status-message" :class="caseDescriptionUpdateStatus.type">
+              {{ caseDescriptionUpdateStatus.message }}
+            </span>
           </div>
         </div>
       </div>
@@ -105,10 +118,11 @@ export default {
       originalOption: null,
       caseImages: [], // Will hold all images for the selected case
       resizeHandler: null, // Store the resize handler reference
-      case_xys_dict: {}, // Dictionary to hold case names and their corresponding indices
+      case_xys_dict: {}, 
       fileNames: [], // Will hold filenames of the points
       labels: [], // Will hold cluster labels
       cases: [], // Will hold case names
+      caseMap: {}, // Will hold a map of case names to their point indices
       times: [], // Will hold time steps
       iscentroid: [], // Will hold centroid information
       centroid_indices: [], // Will hold centroid indices
@@ -122,12 +136,20 @@ export default {
       submittingDescription: false, // Flag for submission status
       descriptionUpdateStatus: null, // For status messages
       generatingDescription: false, // Flag for generating description
+      currentCaseDescription: '', // Will hold the current case description being edited
+      originalCaseDescription: '', // To track if case description has changed
+      submittingCaseDescription: false, // Flag for submission status
+      caseDescriptionUpdateStatus: null, // For status messages
+      generatingCaseDescription: false, // Flag for generating case description
     };
   },
 
   computed: {
     descriptionChanged() {
       return this.currentDescription !== this.originalDescription;
+    },
+    caseDescriptionChanged() {
+      return this.currentCaseDescription !== this.originalCaseDescription;
     }
   },
 
@@ -175,7 +197,7 @@ export default {
         name: 'Centroids',
         type: 'scatter',
         data: centroidCoordinates.map(point => point.value),
-        symbolSize: 20,
+        symbolSize: 15,
         symbol: 'diamond',
         itemStyle: {
           color: (params) => {
@@ -273,7 +295,7 @@ export default {
         this.fileNames = data.fnames;
         this.times = data.times;
         this.cases = data.cases;
-        const caseMap = this.buildCaseMap(this.cases);
+        this.caseMap = this.buildCaseMap(this.cases);
         this.case_xys_dict = data.case_xys_dict;
         this.descriptions = data.descriptions;
         this.iscentroid = data.iscentroid;
@@ -373,7 +395,7 @@ export default {
                 index = params.dataIndex;
                 console.log('Clicked point:', index);
               } else if (params.seriesName === 'Case Line') {
-                index = caseMap[this.selectedCaseName][params.dataIndex];
+                index = this.caseMap[this.selectedCaseName][params.dataIndex];
                 console.log('Clicked trajectory:', params);
               }
               // console.log('Clicked params.dataIndex: ', params.dataIndex, 'Clicked index:', index, 'Series name:', params.seriesName, 'Case:', this.cases[index], 'Time:', this.times[index]);
@@ -381,7 +403,7 @@ export default {
               const caseName = this.cases[index];
 
               // Find all points from the same case
-              const casePointIndices = caseMap[caseName] || [];
+              const casePointIndices = this.caseMap[caseName] || [];
               console.log('Case points:', casePointIndices);
 
               if (casePointIndices.length > 0) {
@@ -482,6 +504,16 @@ export default {
       }
     },
 
+    imgOnClick(timeStep){
+      this.selectedTimeStep = timeStep;
+      this.selectedPoint = this.caseMap[this.selectedCaseName][timeStep-1];
+      this.currentDescription = this.descriptions[this.selectedPoint] || '';
+      this.originalDescription = this.currentDescription;
+      this.caseImages.forEach((image, index) => {
+        image.isSelected = index === timeStep - 1; // Update selected state based on timeStep
+      });
+    },
+
     // Build a map of case names to their point indices
     buildCaseMap(cases) {
       const caseMap = {};
@@ -518,7 +550,6 @@ export default {
           // Update the local descriptions array
           this.descriptions[this.selectedPoint] = this.currentDescription;
           this.originalDescription = this.currentDescription;
-
           this.descriptionUpdateStatus = {
             type: 'success',
             message: 'Description updated successfully'
@@ -570,9 +601,6 @@ export default {
         if (response.data.success) {
           // Update the description field with the generated description
           this.currentDescription = response.data.description;
-
-          // Don't set originalDescription yet - this allows user to modify before saving
-          // Show success message
           this.descriptionUpdateStatus = {
             type: 'success',
             message: 'Description generated successfully'
@@ -668,7 +696,7 @@ export default {
       similarities.sort((a, b) => a.mse - b.mse);
 
       // Take top 3 similar cases
-      this.similarCases = similarities.slice(1, 4);
+      this.similarCases = similarities.slice(1, 7);
 
       // Render the similar case charts after DOM update
       this.$nextTick(() => {
@@ -768,8 +796,7 @@ export default {
                 const timeStep = this.times[index];
                 return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${this.labels[index]}`;
               } else {
-                const caseMap = this.buildCaseMap(this.cases);
-                index = caseMap[similarCase.caseName][params.dataIndex];
+                index = this.caseMap[similarCase.caseName][params.dataIndex];
                 // This is for the Trajectory series
                 return `Point ${params.dataIndex + 1} in ${similarCase.caseName}<br/>Cluster: ${this.labels[index]}`;
               }
@@ -836,11 +863,10 @@ export default {
         chart.on('click', (params) => {
           if (params.componentType === 'series') {
             let index = params.dataIndex;
-            const caseMap = this.buildCaseMap(this.cases);
             const pathmap = { p: 'p_crop_trans/', OH: 'imgs/oh_trans/', Mach: 'imgs/mach_trans/' };
             const path = 'external_images/' + (pathmap[this.graphObj.selectedComponent] || pathmap.p);
             if (params.seriesName === 'Trajectory') {
-              index = caseMap[similarCase.caseName][index];
+              index = this.caseMap[similarCase.caseName][index];
             }
             this.selectedPoint = index;
             this.selectedTimeStep = this.times[index]
@@ -855,7 +881,7 @@ export default {
             this.selectedCaseName = this.cases[index];
 
             // Generate images for all points in this case
-            this.caseImages = caseMap[this.selectedCaseName].map(idx => {
+            this.caseImages = this.caseMap[this.selectedCaseName].map(idx => {
               return {
                 src: process.env.BASE_URL + path + this.fileNames[idx],
                 timeStep: this.times[idx],
@@ -963,7 +989,7 @@ export default {
 
 .images-container {
   flex: 1;
-  /* height: 100%; */
+  height: 100%;
   /* overflow-y: auto; */
   /* max-height: 500px; */
   border-left: 1px solid #ddd;
@@ -971,21 +997,21 @@ export default {
 }
 
 .images-grid {
+  height: 50vh;
   display: grid;
   grid-template-columns: 1fr;
   gap: 0px;
+  overflow: scroll;
 }
 
 .image-item {
   border: 2px solid transparent;
   border-radius: 4px;
-  overflow: hidden;
-  transition: all 0.3s ease;
+  /* transition: all 0.3s ease; */
 }
 
 .image-item img {
-  width: 100%;
-  height: auto;
+  height: 30px;
   display: block;
 }
 
@@ -1098,7 +1124,7 @@ h3 {
 .image-with-time {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
   background-color: #f9f9f9;
   border-radius: 4px;
   overflow: hidden;
@@ -1129,12 +1155,12 @@ h3 {
 }
 
 /* Adjust the image-item to work with the new layout */
-.image-item {
+/* .image-item {
   border: 2px solid transparent;
   border-radius: 4px;
   overflow: hidden;
   transition: all 0.3s ease;
-}
+} */
 
 .selected-image .image-with-time {
   background-color: #fff7f2;
@@ -1152,23 +1178,24 @@ h3 {
 }
 
 .trajectories-container {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columns */
+  grid-template-rows: repeat(2, auto);   /* 2 rows */
   gap: 10px;
-  margin-top: 5px;
+  margin-top: 10px;
 }
 
 .similar-case {
-  flex: 1;
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 10px;
-  height: auto;
-  /* background-color: #f9f9f9; */
+  /* height: auto; */
+  background-color: #f9f9f9;
 }
 
 .similar-chart {
   width: 100%;
-  height: 200px
+  height: 150px
 }
 
 h4 {
@@ -1209,7 +1236,7 @@ h4 {
   background-color: #4CAF50;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 4px 16px;
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
