@@ -13,16 +13,20 @@
         </template>
         <el-menu-item-group>
           <span slot="title">P (Mpa):</span>
-          <el-menu-item index="1-1">
+          <el-menu-item index="1-1" style="position: relative;">
             <el-row :gutter="10">
               <el-col :span="12">
-                <div class="grid-content"><vue-slider v-model="pRange" :min="0.8" :max="2.1" :interval="0.05" /></div>
+                <div class="grid-content"><vue-slider v-model="pRange" :min="0.8" :max="2.1" :interval="0.05"/></div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input type="number" v-model="pRange[0]" :min="0.8" :max="2.1" /></div>
+              <div class="grid-content" style="display: flex; align-items: center; height: 100%;">
+                <input class="myinput" type="number" v-model="pRange[0]" :min="0.8" :max="2.1" style="width: 100%;"/>
+              </div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input type="number" v-model="pRange[1]" :min="0.8" :max="2.1" /></div>
+              <div class="grid-content" style="display: flex; align-items: center; height: 100%;">
+                <input class="myinput" type="number" v-model="pRange[1]" :min="0.8" :max="2.1" style="width: 100%;" />
+              </div>
               </el-col>
             </el-row>
           </el-menu-item>
@@ -35,10 +39,10 @@
                 <div class="grid-content"><vue-slider v-model="tRange" :min="500" :max="900" :interval="10" /></div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input type="number" v-model="tRange[0]" :min="500" :max="900" /></div>
+                <div class="grid-content"><input class="myinput" type="number" v-model="tRange[0]" :min="500" :max="900" /></div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input type="number" v-model="tRange[1]" :min="500" :max="900" /></div>
+                <div class="grid-content"><input class="myinput" type="number" v-model="tRange[1]" :min="500" :max="900" /></div>
               </el-col>
             </el-row>
           </el-menu-item>
@@ -51,10 +55,10 @@
                 <div class="grid-content"><vue-slider v-model="h2oRange" :min="0" :max="20" /></div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input type="number" v-model="h2oRange[0]" :min="0" :max="20" /></div>
+                <div class="grid-content"><input class="myinput" type="number" v-model="h2oRange[0]" :min="0" :max="20" /></div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input type="number" v-model="h2oRange[1]" :min="0" :max="20" /></div>
+                <div class="grid-content"><input class="myinput" type="number" v-model="h2oRange[1]" :min="0" :max="20" /></div>
               </el-col>
             </el-row>
           </el-menu-item>
@@ -141,6 +145,12 @@
 </template>
 
 <style>
+.myinput {
+  border-radius: 5px; 
+  border-color: darkgray;
+  text-indent: 0.3em;
+}
+
 .el-menu-vertical-demo:not(.el-menu--collapse) {
   width: 400px;
   height: auto;

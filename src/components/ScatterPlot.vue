@@ -8,11 +8,8 @@
       <!-- Left side: Chart -->
       <div class="chart-container">
         <div class="chart-controls">
-          <button 
-            class="control-button"
-            @click="toggleCentroids"
-            :class="{ 'active': showCentroids }"
-          >
+          <!-- <p>Current Case: {{ selectedCaseName }}</p> -->
+          <button class="control-button" @click="toggleCentroids" :class="{ 'active': showCentroids }">
             {{ showCentroids ? 'Hide Centroids' : 'Show Centroids' }}
           </button>
         </div>
@@ -22,7 +19,8 @@
           <h3>Similar Case Trajectories</h3>
           <div class="trajectories-container">
             <div v-for="(similarCase, index) in similarCases" :key="index" class="similar-case">
-              <h4>{{ similarCase.caseName }} (MSE: {{ similarCase.mse.toFixed(2) }})</h4>
+              <!-- <h4>{{ similarCase.caseName }} (MSE: {{ similarCase.mse.toFixed(2) }})</h4> -->
+              <h4>{{ similarCase.caseName }}</h4>
               <div :ref="`similarChart${index}`" class="similar-chart"></div>
             </div>
           </div>
@@ -32,10 +30,12 @@
           <h3>Point Description</h3>
           <!-- <textarea v-model="currentDescription" class="description-textarea"
             placeholder="No description available for this point" rows="4"></textarea> -->
-          <el-input type="textarea" autosize placeholder="No description available for this point" v-model="currentDescription">
+          <el-input type="textarea" rows="6" placeholder="No description available for this point"
+            v-model="currentDescription">
           </el-input>
           <div class="description-actions">
-            <el-button type="success" @click="submitDescription" :disabled="!descriptionChanged || submittingDescription">
+            <el-button type="success" @click="submitDescription"
+              :disabled="!descriptionChanged || submittingDescription">
               {{ submittingDescription ? 'Submitting...' : 'Save Description' }}
             </el-button>
             <el-button type="primary" @click="generateDescription">
@@ -54,7 +54,6 @@
           <div class="point-info">
             <span>Case: {{ selectedCaseName }} Time: {{ selectedTimeStep }}</span>
             <button @click="clearSelection" class="clear-button">Clear Selection</button>
-            <img :src="selectedImage" alt="Selected Image" style="width: 100%; height: auto; display: block;">
           </div>
         </div>
         <div class="images-grid">
@@ -151,7 +150,7 @@ export default {
       // Get current chart options
       const currentOption = this.myChart.getOption();
       const currentSeries = currentOption.series;
-      
+
       // Get coordinates of centroids
       const coordinates = currentOption.series[0].data;
       const centroidCoordinates = [];
@@ -205,7 +204,7 @@ export default {
       // Add the centroid series to the existing series array
       // This preserves the original scatter plot
       const newSeries = [...currentSeries, centroidSeries];
-      
+
       // Update the chart with all series
       this.myChart.setOption({
         series: newSeries
@@ -219,10 +218,10 @@ export default {
 
       // Get all current series except the centroid series
       const option = this.myChart.getOption();
-      
+
       // Debug the series names to identify any mismatch
       console.log('Current series:', option.series.map(s => s.name));
-      
+
       // Filter series more robustly to ensure centroids are removed
       const filteredSeries = option.series.filter(series => {
         return series.name !== 'Centroids';
@@ -283,19 +282,11 @@ export default {
         if (Array.isArray(coordinates) && coordinates.length > 0) {
           const option = {
             title: {
-              text: 'Scatter Plot'
+              text: 'Scatter Plot',
             },
             tooltip: {
               trigger: 'item',
-              formatter: (params) => {
-                if (params.seriesName === 'Scatter Data') {
-                  const index = params.dataIndex;
-                  const caseName = this.cases[index];
-                  const timeStep = this.times[index];
-                  return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${this.labels[index]}`; // Add cluster info
-                }
-              }
-            },  
+            },
             grid: {
               left: '0%',
               right: '0%',
@@ -348,12 +339,22 @@ export default {
               type: 'scatter',
               id: 'main-scatter',
               data: coordinates,
-              symbolSize: 5,
+              symbolSize: 4,
               itemStyle: {
                 color: (params) => {
                   const clusterIndex = this.labels[params.dataIndex];
                   return clusterIndex < cluster_count ? `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)` : '#000';
                 },
+              },
+              tooltip: {
+                trigger: 'item',
+                formatter: (params) => {
+                  const index = params.dataIndex;
+                  const caseName = this.cases[index];
+                  const timeStep = this.times[index];
+                  return `Case: ${caseName}<br/>Time: ${timeStep}<br/>Cluster: ${this.labels[index]}`;
+                },
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
               },
             }]
           };
@@ -364,66 +365,76 @@ export default {
 
           this.myChart.on('click', (params) => {
             if (params.componentType === 'series') {
-              const index = (params.seriesName === 'Centroids' ? this.centroid_indices[params.dataIndex] : params.dataIndex);
-              console.log('Clicked params.dataIndex: ',params.dataIndex,'Clicked index:', index, 'Series name:', params.seriesName, 'Case:', this.cases[index], 'Time:', this.times[index]);
+              let index = 0;
+              if (params.seriesName === 'Centroids') {
+                index = this.centroid_indices[params.dataIndex];
+                console.log('Clicked centroid:', index);
+              } else if (params.seriesName === 'Scatter Data') {
+                index = params.dataIndex;
+                console.log('Clicked point:', index);
+              } else if (params.seriesName === 'Case Line') {
+                index = caseMap[this.selectedCaseName][params.dataIndex];
+                console.log('Clicked trajectory:', params);
+              }
+              // console.log('Clicked params.dataIndex: ', params.dataIndex, 'Clicked index:', index, 'Series name:', params.seriesName, 'Case:', this.cases[index], 'Time:', this.times[index]);
               const fileName = this.fileNames[index];
               const caseName = this.cases[index];
 
               // Find all points from the same case
-              const casePoints = caseMap[caseName] || [];
-              console.log('Case points:', casePoints);
+              const casePointIndices = caseMap[caseName] || [];
+              console.log('Case points:', casePointIndices);
 
-              if (casePoints.length > 0) {
-                casePoints.sort((a, b) => this.times[a] - this.times[b]);
-                const lineCoordinates = casePoints.map(idx => coordinates[idx]);
+              if (casePointIndices.length > 0) {
+                casePointIndices.sort((a, b) => this.times[a] - this.times[b]);
+                const lineCoordinates = casePointIndices.map(idx => coordinates[idx]);
                 console.log('Line coordinates:', lineCoordinates);
 
                 // Add a line series connecting the points in time order
                 const lineOption = {
+                  animation: false,
                   series: [
                     // Keep the original scatter series for background points
                     {
                       id: 'main-scatter',
+                      name: 'Scatter Data',
                       type: 'scatter',
                       data: coordinates,
                       symbolSize: function (value, params) {
                         // Check if this point belongs to the selected case
                         if (this.cases && this.cases[params.dataIndex] === caseName) {
-                          return 10; // Bigger symbol size for selected case points
+                          return 6; // Bigger symbol size for selected case points
                         }
-                        return 5; // Default size for other points
+                        return 4; // Default size for other points
                       }.bind(this),
-                      itemStyle: {
-                        color: (params) => {
-                          const clusterIndex = this.labels[params.dataIndex];
-                          return clusterIndex < cluster_count ?
-                            `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)` :
-                            '#000';
+                      symbol: 'circle',
+                      emphasis: {
+                        itemStyle: {
+                          borderWidth: 1,
+                          borderColor: '#000'
                         }
                       },
-                      // emphasis: {
-                      //   itemStyle: {
-                      //     borderColor: '#000',
-                      //     borderWidth: 1
-                      //   }
-                      // },
                       z: 5 // Keep regular points in middle layer
                     },
                     // Add connecting line first (lowest z-index of active elements)
                     {
                       id: 'case-line',
+                      name: 'Case Line',
                       type: 'line',
                       data: lineCoordinates,
                       lineStyle: {
-                        color: '#000000',
-                        width: 2,
+                        color: '#000',
+                        width: 3,
                         type: 'solid',
-                        opacity: 0.8
                       },
-                      symbol: 'circle',
+                      itemStyle: {
+                        bordercolor: '#000',
+                        color: '#000',
+                        // borderWidth: 3,
+                      },
                       tooltip: {
-                        show: false // Disable tooltip for the line
+                        disabled: true // Disable tooltip for line
                       },
+                      symbolSize: 6,
                       z: 10 // Place line above background points
                     },
                   ]
@@ -443,12 +454,12 @@ export default {
                 this.descriptionUpdateStatus = null; // Reset status message
 
                 // Get the component path for images
-                const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/' };
+                const pathmap = { p: 'p_crop_trans/', OH: 'imgs/oh_trans/', Mach: 'imgs/mach_trans/' };
                 const path = 'external_images/' + (pathmap[this.graphObj.selectedComponent] || pathmap.p);
                 this.selectedImage = process.env.BASE_URL + path + fileName;
 
                 // Generate images for all points in this case
-                this.caseImages = casePoints.map(idx => {
+                this.caseImages = casePointIndices.map(idx => {
                   return {
                     src: process.env.BASE_URL + path + this.fileNames[idx],
                     timeStep: this.times[idx],
@@ -535,17 +546,17 @@ export default {
         }, 3000);
       }
     },
-    
+
     async generateDescription() {
       if (this.selectedPoint === null) return;
-      
+
       this.generatingDescription = true;
       this.descriptionUpdateStatus = null;
-      
+
       try {
         // Get the filename for the current point
         const fileName = this.fileNames[this.selectedPoint];
-        
+
         // Send the request to generate a description
         const response = await axios.post('http://localhost:5000/generate_description', {
           index: this.selectedPoint,
@@ -555,11 +566,11 @@ export default {
           component: this.graphObj.selectedComponent,
           cluster: this.labels[this.selectedPoint]
         });
-        
+
         if (response.data.success) {
           // Update the description field with the generated description
           this.currentDescription = response.data.description;
-          
+
           // Don't set originalDescription yet - this allows user to modify before saving
           // Show success message
           this.descriptionUpdateStatus = {
@@ -580,7 +591,7 @@ export default {
         };
       } finally {
         this.generatingDescription = false;
-        
+
         // Clear success message after a delay
         setTimeout(() => {
           if (this.descriptionUpdateStatus && this.descriptionUpdateStatus.type === 'success') {
@@ -657,7 +668,7 @@ export default {
       similarities.sort((a, b) => a.mse - b.mse);
 
       // Take top 3 similar cases
-      this.similarCases = similarities.slice(0, 3);
+      this.similarCases = similarities.slice(1, 4);
 
       // Render the similar case charts after DOM update
       this.$nextTick(() => {
@@ -742,10 +753,10 @@ export default {
         // Create a smaller version of the main chart
         const option = {
           grid: {
-            top: '5%',
-            left: '5%',
-            right: '5%',
-            bottom: '5%',
+            top: '0%',
+            left: '2%',
+            right: '2%',
+            bottom: '0%',
             containLabel: false
           },
           tooltip: {
@@ -812,7 +823,7 @@ export default {
                 width: 2
               },
               symbol: 'circle',
-              symbolSize: 6,
+              symbolSize: 3,
               itemStyle: {
                 color: '#3366cc'
               },
@@ -826,7 +837,7 @@ export default {
           if (params.componentType === 'series') {
             let index = params.dataIndex;
             const caseMap = this.buildCaseMap(this.cases);
-            const pathmap = { p: 'p_cropped_img2/', OH: 'imgs/oh/', Mach: 'imgs/mach/' };
+            const pathmap = { p: 'p_crop_trans/', OH: 'imgs/oh_trans/', Mach: 'imgs/mach_trans/' };
             const path = 'external_images/' + (pathmap[this.graphObj.selectedComponent] || pathmap.p);
             if (params.seriesName === 'Trajectory') {
               index = caseMap[similarCase.caseName][index];
