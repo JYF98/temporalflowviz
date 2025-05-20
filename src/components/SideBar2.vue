@@ -16,7 +16,9 @@
           <el-menu-item index="1-1" style="position: relative;">
             <el-row :gutter="10">
               <el-col :span="12">
-                <div class="grid-content"><vue-slider v-model="pRange" :min="0.8" :max="2.1" :interval="0.05"/></div>
+                <div class="grid-content slider-container">
+                  <vue-slider v-model="pRange" :min="0.8" :max="2.1" :interval="0.05"/>
+                </div>
               </el-col>
               <el-col :span="6">
               <div class="grid-content" style="display: flex; align-items: center; height: 100%;">
@@ -24,9 +26,9 @@
               </div>
               </el-col>
               <el-col :span="6">
-              <div class="grid-content" style="display: flex; align-items: center; height: 100%;">
-                <input class="myinput" type="number" v-model="pRange[1]" :min="0.8" :max="2.1" style="width: 100%;" />
-              </div>
+                <div class="grid-content" style="display: flex; align-items: center; height: 100%;">
+                  <input class="myinput" type="number" v-model="pRange[1]" :min="0.8" :max="2.1" style="width: 100%;" />
+                </div>
               </el-col>
             </el-row>
           </el-menu-item>
@@ -36,7 +38,7 @@
           <el-menu-item index="1-2">
             <el-row :gutter="10">
               <el-col :span="12">
-                <div class="grid-content"><vue-slider v-model="tRange" :min="500" :max="900" :interval="10" /></div>
+                <div class="grid-content slider-container"><vue-slider v-model="tRange" :min="500" :max="900" :interval="10" /></div>
               </el-col>
               <el-col :span="6">
                 <div class="grid-content"><input class="myinput" type="number" v-model="tRange[0]" :min="500" :max="900" /></div>
@@ -52,7 +54,7 @@
           <el-menu-item index="1-3">
             <el-row :gutter="10">
               <el-col :span="12">
-                <div class="grid-content"><vue-slider v-model="h2oRange" :min="0" :max="20" /></div>
+                <div class="grid-content  slider-container"><vue-slider v-model="h2oRange" :min="0" :max="20" /></div>
               </el-col>
               <el-col :span="6">
                 <div class="grid-content"><input class="myinput" type="number" v-model="h2oRange[0]" :min="0" :max="20" /></div>
@@ -75,13 +77,13 @@
             :hidden="isCollapse" @selection-change="handleSelectionChange">
             <el-table-column type="selection" width="55">
             </el-table-column>
-            <el-table-column fixed prop="case" label="Case" width="120" show-overflow-tooltip>
+            <el-table-column sortable fixed prop="case" label="Case" width="120" show-overflow-tooltip>
             </el-table-column>
-            <el-table-column prop="p" label="P">
+            <el-table-column sortable prop="p" label="P">
             </el-table-column>
-            <el-table-column prop="t" label="T">
+            <el-table-column sortable prop="t" label="T">
             </el-table-column>
-            <el-table-column prop="h2o" label="H2O (%)">
+            <el-table-column sortable prop="h2o" label="H2O">
             </el-table-column>
           </el-table>
           <!-- <div style="margin-top: 20px">
@@ -204,6 +206,22 @@
   padding: 10px 0;
   background-color: #f9fafc;
 }
+
+/* Add this new class to center the slider */
+.slider-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0 10px;
+}
+
+/* Make the slider itself take up appropriate width */
+.vue-slider {
+  width: 90% !important; /* Override any inline width */
+  max-width: 250px;
+  margin: 0 auto;
+}
 </style>
 
 <script>
@@ -226,8 +244,8 @@ export default {
       graphObj: {
         selectedCases: [],
         selectedComponent: 'p', // Default selected component
-        minSamples: 30, // DBSCAN minSamples
-        eps: 4, // DBSCAN eps
+        minSamples: 20, // DBSCAN minSamples
+        eps: 1.5, // DBSCAN eps
       },
       fileList: [],
       uploadDisabled: false,

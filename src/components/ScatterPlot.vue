@@ -13,14 +13,14 @@
             {{ showCentroids ? 'Hide Centroids' : 'Show Centroids' }}
           </button>
         </div>
-        <div ref="scatterChart" style="flex: 1; height: 500px;"></div>
+        <div ref="scatterChart" style="flex: 1; height: 450px;"></div>
         <!-- Similar trajectories section -->
         <div class="similar-trajectories">
           <h3>Similar Case Trajectories</h3>
           <div class="trajectories-container">
             <div v-for="(similarCase, index) in similarCases" :key="index" class="similar-case">
-              <!-- <h4>{{ similarCase.caseName }} (MSE: {{ similarCase.mse.toFixed(2) }})</h4> -->
-              <h4>{{ similarCase.caseName }}</h4>
+              <h4>{{ similarCase.caseName }} (Diff: {{ similarCase.mse.toFixed(2) }})</h4>
+              <!-- <h4>{{ similarCase.caseName }}</h4> -->
               <div :ref="`similarChart${index}`" class="similar-chart"></div>
             </div>
           </div>
@@ -46,31 +46,31 @@
         </div>
         <!-- Description editor section -->
         <div v-if="selectedPoint !== null" class="description-section">
-          <h3>Point Description</h3>
-          <el-input type="textarea" rows="8" placeholder="No description available for this point"
+          <h3>Frame Description</h3>
+          <el-input type="textarea" rows="6" placeholder="No description available for this point"
             v-model="currentDescription">
           </el-input>
           <div class="description-actions">
-            <el-button type="success" @click="submitDescription"
+            <el-button size="small" type="success" @click="submitDescription"
               :disabled="!descriptionChanged || submittingDescription">
               {{ submittingDescription ? 'Submitting...' : 'Save Description' }}
             </el-button>
-            <el-button type="primary" @click="generateDescription">
+            <el-button size="small" type="primary" @click="generateDescription">
               {{ generatingDescription ? 'Generating...' : 'Generate Description' }}
             </el-button>
             <span v-if="descriptionUpdateStatus" class="status-message" :class="descriptionUpdateStatus.type">
               {{ descriptionUpdateStatus.message }}
             </span>
           </div>
-          <h3>Case Description</h3>
-          <el-input type="textarea" rows="8" placeholder="No description available for this case"
-            v-model="caseDescription"></el-input>
+          <h3>Case Summary</h3>
+          <el-input type="textarea" rows="6" placeholder="No description available for this case"
+            v-model="currentCaseDescription"></el-input>
           <div class="description-actions">
-            <el-button type="success" @click="submitCaseDescription"
+            <el-button size="small" type="success" @click="submitCaseDescription"
               :disabled="!caseDescriptionChanged || submittingCaseDescription">
               {{ submittingCaseDescription ? 'Submitting...' : 'Save Description' }}
             </el-button>
-            <el-button type="primary" @click="generateCaseDescription">
+            <el-button size="small" type="primary" @click="generateCaseDescription">
               {{ generatingCaseDescription ? 'Generating...' : 'Generate Description' }}
             </el-button>
             <span v-if="caseDescriptionUpdateStatus" class="status-message" :class="caseDescriptionUpdateStatus.type">
@@ -654,7 +654,7 @@ export default {
 
     async fetchCoordinates() {
       try {
-        const response = await axios.post('http://localhost:5000/coordinates_test', this.graphObj);
+        const response = await axios.post('http://localhost:5000/coordinates', this.graphObj);
         return response.data;
       } catch (error) {
         console.error('Error fetching coordinates:', error);
@@ -993,11 +993,11 @@ export default {
   /* overflow-y: auto; */
   /* max-height: 500px; */
   border-left: 1px solid #ddd;
-  padding-left: 20px;
+  padding-left: 10px;
 }
 
 .images-grid {
-  height: 50vh;
+  /* height: 50vh; */
   display: grid;
   grid-template-columns: 1fr;
   gap: 0px;
@@ -1005,15 +1005,16 @@ export default {
 }
 
 .image-item {
+  width: 100%;
   border: 2px solid transparent;
   border-radius: 4px;
   /* transition: all 0.3s ease; */
 }
 
-.image-item img {
+/* .image-item img {
   height: 30px;
   display: block;
-}
+} */
 
 .image-info {
   padding: 5px;
@@ -1088,8 +1089,7 @@ export default {
 }
 
 .selected-point-details {
-  margin-top: 10px;
-  padding: 10px;
+  padding: 5px;
   border: 1px solid #ddd;
   border-radius: 4px;
   display: flex;
@@ -1124,8 +1124,10 @@ h3 {
 .image-with-time {
   display: flex;
   align-items: center;
-  gap: 2px;
+  /* gap: 2px; */
+  /* width: 100%; */
   background-color: #f9f9f9;
+  border: 2px;
   border-radius: 4px;
   overflow: hidden;
 }
@@ -1147,8 +1149,8 @@ h3 {
 }
 
 .image-with-time img {
-  flex: 1;
-  max-width: calc(100% - 90px);
+  /* width: auto; */
+  max-width: calc(100% - 60px);
   /* Account for label width + gap */
   height: auto;
   display: block;
