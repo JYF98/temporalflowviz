@@ -21,12 +21,12 @@
                 </div>
               </el-col>
               <el-col :span="6">
-              <div class="grid-content" style="display: flex; align-items: center; height: 100%;">
+              <div class="grid-content slider-dual-input">
                 <input class="myinput" type="number" v-model="pRange[0]" :min="0.8" :max="2.1" style="width: 100%;"/>
               </div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content" style="display: flex; align-items: center; height: 100%;">
+                <div class="grid-content slider-dual-input">
                   <input class="myinput" type="number" v-model="pRange[1]" :min="0.8" :max="2.1" style="width: 100%;" />
                 </div>
               </el-col>
@@ -35,32 +35,42 @@
         </el-menu-item-group>
         <el-menu-item-group>
           <span slot="title">Temperature (K):</span>
-          <el-menu-item index="1-2">
+          <el-menu-item index="1-2" style="position: relative;">
             <el-row :gutter="10">
               <el-col :span="12">
-                <div class="grid-content slider-container"><vue-slider v-model="tRange" :min="500" :max="900" :interval="10" /></div>
+                <div class="grid-content slider-container">
+                  <vue-slider v-model="tRange" :min="500" :max="900" :interval="10" />
+                </div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input class="myinput" type="number" v-model="tRange[0]" :min="500" :max="900" /></div>
+                <div class="grid-content slider-dual-input">
+                  <input class="myinput" type="number" v-model="tRange[0]" :min="500" :max="900" />
+                </div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input class="myinput" type="number" v-model="tRange[1]" :min="500" :max="900" /></div>
+                <div class="grid-content slider-dual-input">
+                  <input class="myinput" type="number" v-model="tRange[1]" :min="500" :max="900" />
+                </div>
               </el-col>
             </el-row>
           </el-menu-item>
         </el-menu-item-group>
         <el-menu-item-group>
           <span slot="title">H2O (%):</span>
-          <el-menu-item index="1-3">
+          <el-menu-item index="1-3" style="position: relative;">
             <el-row :gutter="10">
               <el-col :span="12">
-                <div class="grid-content  slider-container"><vue-slider v-model="h2oRange" :min="0" :max="20" /></div>
+                <div class="grid-content slider-container"><vue-slider v-model="h2oRange" :min="0" :max="20" /></div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input class="myinput" type="number" v-model="h2oRange[0]" :min="0" :max="20" /></div>
+                <div class="grid-content slider-dual-input">
+                  <input class="myinput" type="number" v-model="h2oRange[0]" :min="0" :max="20" />
+                </div>
               </el-col>
               <el-col :span="6">
-                <div class="grid-content"><input class="myinput" type="number" v-model="h2oRange[1]" :min="0" :max="20" /></div>
+                <div class="grid-content slider-dual-input">
+                  <input class="myinput" type="number" v-model="h2oRange[1]" :min="0" :max="20" />
+                </div>
               </el-col>
             </el-row>
           </el-menu-item>
@@ -147,81 +157,7 @@
 </template>
 
 <style>
-.myinput {
-  border-radius: 5px; 
-  border-color: darkgray;
-  text-indent: 0.3em;
-}
-
-.el-menu-vertical-demo:not(.el-menu--collapse) {
-  width: 400px;
-  height: auto;
-}
-
-.el-row {
-  margin-bottom: 0px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.el-col {
-  border-radius: 4px;
-}
-
-.el-table .cell {
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
-
-/* For even more compact rows*/
-.el-table .cell {
-  line-height: 18px;
-}
-
-/* Make the entire table more compact */
-.el-table td, .el-table th {
-  padding: 6px 0;
-}
-
-.bg-purple-dark {
-  background: #99a9bf;
-}
-
-.bg-purple {
-  background: #d3dce6;
-}
-
-.bg-purple-light {
-  background: #e5e9f2;
-}
-
-.grid-content {
-  border-radius: 4px;
-  min-height: 36px;
-}
-
-.row-bg {
-  padding: 10px 0;
-  background-color: #f9fafc;
-}
-
-/* Add this new class to center the slider */
-.slider-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  padding: 0 10px;
-}
-
-/* Make the slider itself take up appropriate width */
-.vue-slider {
-  width: 90% !important; /* Override any inline width */
-  max-width: 250px;
-  margin: 0 auto;
-}
+  @import 'SideBar2.css';
 </style>
 
 <script>

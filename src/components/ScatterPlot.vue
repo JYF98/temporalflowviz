@@ -176,6 +176,8 @@ export default {
       // Get coordinates of centroids
       const coordinates = currentOption.series[0].data;
       const centroidCoordinates = [];
+      const centroidxys = this.centroid_indices.map(index => coordinates[index]);
+      const centroidlbls = this.centroid_indices.map(index => this.labels[index]);
 
       // Find all centroid points based on iscentroid array
       this.iscentroid.forEach((isCentroid, index) => {
@@ -196,12 +198,14 @@ export default {
       const centroidSeries = {
         name: 'Centroids',
         type: 'scatter',
-        data: centroidCoordinates.map(point => point.value),
+        // data: centroidCoordinates.map(point => point.value),
+        data: centroidxys,
         symbolSize: 15,
         symbol: 'diamond',
         itemStyle: {
           color: (params) => {
-            const clusterIndex = centroidCoordinates[params.dataIndex].clusterIndex;
+            // const clusterIndex = centroidCoordinates[params.dataIndex].clusterIndex;
+            const clusterIndex = centroidlbls[params.dataIndex];
             const cluster_count = Math.max(...this.labels) - Math.min(...this.labels) + 1;
             return `hsl(${(clusterIndex / cluster_count) * 360}, 100%, 50%)`;
           },
@@ -213,7 +217,7 @@ export default {
         z: 0,
         tooltip: {
           formatter: (params) => {
-            const clusterIndex = centroidCoordinates[params.dataIndex].clusterIndex;
+            const clusterIndex = centroidlbls[params.dataIndex];
             const index = this.centroid_indices[params.dataIndex];
             return `Centroid of Cluster ${clusterIndex}<br/>Case: ${this.cases[index]}<br/>Time: ${this.times[index]}<br/>Cluster: ${this.labels[index]}`;
           }
@@ -451,7 +455,7 @@ export default {
                       itemStyle: {
                         bordercolor: '#000',
                         color: '#000',
-                        // borderWidth: 3,
+                        borderWidth: 1,
                       },
                       tooltip: {
                         disabled: true // Disable tooltip for line
@@ -638,8 +642,8 @@ export default {
         const resetOption = {
           series: this.originalOption.series
         };
-
-        this.myChart.setOption(resetOption);
+        // console.log('Cuurent Option: ', this.myChart.getOption(), 'Resetting chart to original option:', resetOption);
+        this.myChart.setOption(resetOption, {replaceMerge:['series']});
         this.selectedPoint = null;
         this.selectedImage = null;
         this.selectedCaseName = null;
@@ -850,7 +854,7 @@ export default {
                 width: 2
               },
               symbol: 'circle',
-              symbolSize: 3,
+              symbolSize: 5,
               itemStyle: {
                 color: '#3366cc'
               },
@@ -997,7 +1001,7 @@ export default {
 }
 
 .images-grid {
-  /* height: 50vh; */
+  height: 50vh;
   display: grid;
   grid-template-columns: 1fr;
   gap: 0px;

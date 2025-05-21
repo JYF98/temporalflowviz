@@ -1,0 +1,82 @@
+.myinput {
+  border-radius: 5px;
+  border-color: darkgray;
+  text-indent: 0.3em;
+}
+
+.el-menu-vertical-demo:not(.el-menu--collapse) {
+  width: 400px;
+  height: auto;
+}
+
+.el-row {
+  margin-bottom: 0px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.el-col {
+  border-radius: 4px;
+}
+
+.el-table .cell {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* For even more compact rows*/
+.el-table .cell {
+  line-height: 18px;
+}
+
+/* Make the entire table more compact */
+.el-table td,
+.el-table th {
+  padding: 6px 0;
+}
+
+.bg-purple-dark {
+  background: #99a9bf;
+}
+
+.bg-purple {
+  background: #d3dce6;
+}
+
+.bg-purple-light {
+  background: #e5e9f2;
+}
+
+.grid-content {
+  border-radius: 4px;
+  min-height: 36px;
+}
+
+.row-bg {
+  padding: 10px 0;
+  background-color: #f9fafc;
+}
+
+/* Add this new class to center the slider */
+.slider-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0 10px;
+}
+
+/* Make the slider itself take up appropriate width */
+.vue-slider {
+  width: 90% !important; /* Override any inline width */
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+.slider-dual-input {
+  display: flex; 
+  align-items: center; 
+  height: 100%;
+}
