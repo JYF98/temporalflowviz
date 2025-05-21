@@ -1,4 +1,4 @@
-# vue2-scatter-plot
+# TemporalFlowViz: Parameter-Aware Visual Analytics for Interpreting Scramjet Combustion Evolution
 
 ## Project setup
 ```
