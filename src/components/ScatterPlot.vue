@@ -433,12 +433,12 @@ export default {
                         return 4; // Default size for other points
                       }.bind(this),
                       symbol: 'circle',
-                      emphasis: {
-                        itemStyle: {
-                          borderWidth: 1,
-                          borderColor: '#000'
-                        }
-                      },
+                      // emphasis: {
+                      //   itemStyle: {
+                      //     borderWidth: 1,
+                      //     borderColor: '#000'
+                      //   }
+                      // },
                       z: 5 // Keep regular points in middle layer
                     },
                     // Add connecting line first (lowest z-index of active elements)
@@ -556,7 +556,7 @@ export default {
           this.originalDescription = this.currentDescription;
           this.descriptionUpdateStatus = {
             type: 'success',
-            message: 'Description updated successfully'
+            message: 'Saved'
           };
         } else {
           this.descriptionUpdateStatus = {

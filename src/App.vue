@@ -53,13 +53,13 @@ export default {
 html, body {
   margin: 0;
   padding: 0;
-  /* height: 100%; */
+  height: 100%;
   /* overflow: auto;  */
 }
 
 #app {
+  padding: 5px;
   display: flex;
-  /* height: 100vh; Use viewport height instead of percentage */
   /* overflow: auto;  */
 }
 
