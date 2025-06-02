@@ -156,7 +156,7 @@
   </div>
 </template>
 
-<style>
+<style scoped>
   @import 'SideBar2.css';
 </style>
 
@@ -219,7 +219,7 @@ export default {
     async fetchCases() {
       try {
         //send ranges to backend
-        const response = await axios.post('http://localhost:5000/cases', {
+        const response = await axios.post(process.env.VUE_APP_SERVER_URL + '/cases', {
           pRange: this.pRange,
           tRange: this.tRange,
           h2oRange: this.h2oRange

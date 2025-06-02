@@ -227,9 +227,6 @@ export default {
 
       // Store the centroid series for later toggling
       this.centroidSeries = centroidSeries;
-
-      // Add the centroid series to the existing series array
-      // This preserves the original scatter plot
       const newSeries = [...currentSeries, centroidSeries];
 
       // Update the chart with all series
@@ -245,9 +242,6 @@ export default {
 
       // Get all current series except the centroid series
       const option = this.myChart.getOption();
-
-      // Debug the series names to identify any mismatch
-      console.log('Current series:', option.series.map(s => s.name));
 
       // Filter series more robustly to ensure centroids are removed
       const filteredSeries = option.series.filter(series => {
