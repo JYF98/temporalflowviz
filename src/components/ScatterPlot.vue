@@ -129,6 +129,7 @@ export default {
       showCentroids: false, // Track centroids visibility
       centroidSeries: null, // Store centroid series for toggling
       descriptions: [], // Will hold descriptions of the images
+      case_desc_dict: {}, // Will hold case descriptions
       similarCases: [], // Will hold similar cases data
       similarCharts: [], // Will hold references to the chart instances
       currentDescription: '', // Will hold the current description being edited
@@ -302,6 +303,7 @@ export default {
         this.caseMap = this.buildCaseMap(this.cases);
         this.case_xys_dict = data.case_xys_dict;
         this.descriptions = data.descriptions;
+        this.case_desc_dict = data.case_desc_dict;
         this.iscentroid = data.iscentroid;
         this.centroid_indices = data.centroid_indices;
 
@@ -478,6 +480,14 @@ export default {
                 this.currentDescription = this.descriptions[index] || '';
                 this.originalDescription = this.currentDescription;
                 this.descriptionUpdateStatus = null; // Reset status message
+                if (caseName in this.case_desc_dict && this.graphObj.selectedComponent in this.case_desc_dict[caseName]) {
+                  this.currentCaseDescription = this.case_desc_dict[caseName][this.graphObj.selectedComponent];
+                } else {
+                  this.currentCaseDescription = '';
+                }
+                
+                this.originalCaseDescription = this.currentCaseDescription;
+                this.caseDescriptionUpdateStatus = null; // Reset case status message
 
                 // Get the component path for images
                 const pathmap = { p: 'p_crop_trans/', OH: 'imgs/oh_trans/', Mach: 'imgs/mach_trans/' };
@@ -582,6 +592,55 @@ export default {
       }
     },
 
+    async submitCaseDescription() {
+      if (this.selectedCaseName === null || !this.caseDescriptionChanged) return;
+
+      this.submittingCaseDescription = true;
+      this.caseDescriptionUpdateStatus = null;
+      if (!this.case_desc_dict[this.selectedCaseName]) {
+        this.case_desc_dict[this.selectedCaseName] = {};
+      }
+      this.case_desc_dict[this.selectedCaseName][this.graphObj.selectedComponent] = this.currentCaseDescription;
+
+      try {
+        // Send the updated case description to the server
+        const response = await axios.post('http://localhost:5000/update_case_description', {
+          caseName: this.selectedCaseName,
+          description: this.currentCaseDescription,
+          component: this.graphObj.selectedComponent
+        });
+
+        if (response.data.success) {
+          // Update the local case description
+          this.originalCaseDescription = this.currentCaseDescription;
+          this.caseDescriptionUpdateStatus = {
+            type: 'success',
+            message: 'Saved'
+          };
+        } else {
+          this.caseDescriptionUpdateStatus = {
+            type: 'error',
+            message: 'Failed to update case description: ' + (response.data.message || 'Unknown error')
+          };
+        }
+      } catch (error) {
+        console.error('Error updating case description:', error);
+        this.caseDescriptionUpdateStatus = {
+          type: 'error',
+          message: 'Error updating case description: ' + (error.message || 'Network error')
+        };
+      } finally {
+        this.submittingCaseDescription = false;
+
+        // Clear status message after a delay
+        setTimeout(() => {
+          if (this.caseDescriptionUpdateStatus && this.caseDescriptionUpdateStatus.type === 'success') {
+            this.caseDescriptionUpdateStatus = null;
+          }
+        }, 3000);
+      }
+    },
+
     async generateDescription() {
       if (this.selectedPoint === null) return;
 
@@ -633,6 +692,51 @@ export default {
       }
     },
 
+    async generateCaseDescription() {
+      if (this.selectedCaseName === null) return;
+
+      this.generatingCaseDescription = true;
+      this.caseDescriptionUpdateStatus = null;
+
+      try {
+        // Send the request to generate a case description
+        const response = await axios.post('http://localhost:5000/case_description', {
+          caseName: this.selectedCaseName,
+          component: this.graphObj.selectedComponent,
+          caseIndices: this.caseMap[this.selectedCaseName] || []
+        });
+
+        if (response.data.success) {
+          // Update the case description field with the generated description
+          this.currentCaseDescription = response.data.description;
+          this.caseDescriptionUpdateStatus = {
+            type: 'success',
+            message: 'Case description generated successfully'
+          };
+        } else {
+          this.caseDescriptionUpdateStatus = {
+            type: 'error',
+            message: 'Failed to generate case description: ' + (response.data.message || 'Unknown error')
+          };
+        }
+      } catch (error) {
+        console.error('Error generating case description:', error);
+        this.caseDescriptionUpdateStatus = {
+          type: 'error',
+          message: 'Error generating case description: ' + (error.message || 'Network error')
+        };
+      } finally {
+        this.generatingCaseDescription = false;
+
+        // Clear success message after a delay
+        setTimeout(() => {
+          if (this.caseDescriptionUpdateStatus && this.caseDescriptionUpdateStatus.type === 'success') {
+            this.caseDescriptionUpdateStatus = null;
+          }
+        }, 3000);
+      }
+    },
+
     clearSelection() {
       this.clearSimilarCharts();
       this.similarCases = [];
@@ -653,6 +757,9 @@ export default {
         this.currentDescription = '';
         this.originalDescription = '';
         this.descriptionUpdateStatus = null;
+        this.currentCaseDescription = '';
+        this.originalCaseDescription = '';
+        this.caseDescriptionUpdateStatus = null;
       }
     },
 
