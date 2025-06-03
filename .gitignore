@@ -6,6 +6,7 @@ frontend/dist
 public/external_images
 frontend/public/external_images
 backend/__pycache__
+backend/npys
 
 # local env files
 .env.local

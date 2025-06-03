@@ -33,8 +33,8 @@ path_prefixes = {'p':'../frontend/public/external_images/p_crop_trans/',
 # create a list of Embedding objects
 # embnpy = np.load('blip2_mean_pooling.npy')
 # fnamenpy = np.load('blip2_filenames.npy')
-embnpy = np.load('InternViT-6B-448px-V2_5_mean_2.npy')
-fnamenpy = np.load('InternViT-6B-448px-V2_5_filenames_all.npy')
+embnpy = np.load('npys/InternViT-6B-448px-V2_5_mean_2.npy')
+fnamenpy = np.load('npys/InternViT-6B-448px-V2_5_filenames_all.npy')
 # embnpy_p = np.load('InternViT-6B-448px-V2_5_mean_2.npy')
 # fnamenpy_p = np.load('InternViT-6B-448px-V2_5_filenames_all.npy')
 
