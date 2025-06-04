@@ -19,9 +19,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(current_dir)
 sys.path.insert(0, current_dir)
 
-# Print current working directory for verification
-print(f"Working directory changed to: {os.getcwd()}")
-
 app = Flask(__name__)
 CORS(app)
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
@@ -52,9 +49,9 @@ for var in vars:
 
 # read description from a json file
 fname_desc_dict = {} # dict to store desc objects index
-descFile = 'descFile.json'
+descFile = 'descriptions/descFile.json'
 case_desc_dict = {}
-case_desc_file = 'case_desc.json'
+case_desc_file = 'descriptions/case_desc.json'
 
 if not os.path.exists(descFile):
     # Create an empty JSON file if it doesn't exist
