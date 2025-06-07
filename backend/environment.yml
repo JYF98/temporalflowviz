@@ -1,0 +1,10 @@
+name: temporalflowviz
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11 
+  - flask
+  - flask-cors
+  - numpy
+  - scikit-learn

@@ -9,7 +9,6 @@ import json
 import pickle
 import os
 import base64
-import subprocess
 import sys
 
 # Get the directory of the current script
@@ -32,11 +31,7 @@ path_prefixes = {'p':'../frontend/public/external_images/p_crop_trans/',
 # fnamenpy = np.load('blip2_filenames.npy')
 embnpy = np.load('npys/InternViT-6B-448px-V2_5_mean_2.npy')
 fnamenpy = np.load('npys/InternViT-6B-448px-V2_5_filenames_all.npy')
-# embnpy_p = np.load('InternViT-6B-448px-V2_5_mean_2.npy')
-# fnamenpy_p = np.load('InternViT-6B-448px-V2_5_filenames_all.npy')
-
 emb_list = [Embedding(emb, fname) for emb, fname in zip(embnpy, fnamenpy)]
-# emb_list_p = [Embedding(emb, fname) for emb, fname in zip(embnpy_p, fnamenpy_p)]
 
 # create lists of Embedding objects for each variable
 var_list_dict = {}
@@ -44,14 +39,16 @@ vars = ['p', 'OH', 'Mach']
 for var in vars:
     var_list_dict[var] = [obj for obj in emb_list if obj.variable == var]
     var_list_dict[var].sort(key=lambda x: (x.case, x.time))
-# var_list_dict['p'] = [obj for obj in emb_list_p if obj.variable == 'p']
-# var_list_dict['p'].sort(key=lambda x: (x.case, x.time))
 
 # read description from a json file
 fname_desc_dict = {} # dict to store desc objects index
-descFile = 'descriptions/descFile.json'
+desc_dir = os.path.join(current_dir, 'descriptions')
+if not os.path.exists(desc_dir):
+    os.makedirs(desc_dir)
+
+descFile = os.path.join(desc_dir, 'descFile.json')
 case_desc_dict = {}
-case_desc_file = 'descriptions/case_desc.json'
+case_desc_file = os.path.join(desc_dir, 'case_desc.json')
 
 if not os.path.exists(descFile):
     # Create an empty JSON file if it doesn't exist
@@ -369,7 +366,7 @@ def generate_description():
 @app.route('/case_description', methods=['POST'])
 def generate_case_description():
     data = request.json
-    caseName = data.get('caseName')
+    # caseName = data.get('caseName')
     component = data.get('component')
     caseIndices = data.get('caseIndices')
     
@@ -386,7 +383,7 @@ def generate_case_description():
         else:
             prompts.append('')
     prompts.append(prompt_case_p)
-    description = generate_description_with_ollama(OLLAMA_MODEL_NAME, case_img_paths, prompts, num_ctx=16384)
+    description = generate_description_with_ollama(OLLAMA_MODEL_NAME, case_img_paths, prompts, num_ctx=8192)
     return jsonify({'success': True, 'description': description})
 
 if __name__ == '__main__':
